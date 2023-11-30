@@ -91,6 +91,7 @@ LiquidScreen pantallaGrabar_luz_horaapg;
 
 // enumerar el orden de las pantallas, indicandoles un numero
 enum pantalla_num {
+  P_void,
   P_MenuPrincipal,
   P_MenuMonitorizar,
   P_CtrlTemperatura,
@@ -303,6 +304,13 @@ bool Sht31_update(){
     return false;
 }
 
+void fn_principal()
+{
+  menuInvernadero.change_screen2(P_MenuPrincipal);
+  menuInvernadero.set_focusedLine(fcline_menuAnterior);
+  // delay(100);
+}
+
 void fn_monitorizar()
 {
   fcline_menuAnterior = menuInvernadero.get_focusedLine();
@@ -311,7 +319,7 @@ void fn_monitorizar()
     strncpy(temp_estado_ctrl_text, string_on, sizeof(string_on));
   else
     strncpy(temp_estado_ctrl_text, string_off, sizeof(string_off));
-  menuInvernadero.change_screen2(2);
+  menuInvernadero.change_screen2(P_MenuMonitorizar);
   // delay(100);
 }
 
@@ -322,7 +330,7 @@ void fn_ctrlTemp()
     strncpy(temp_estado_ctrl_text, string_on, sizeof(string_on));
   else
     strncpy(temp_estado_ctrl_text, string_off, sizeof(string_off));
-  menuInvernadero.change_screen(3);
+  menuInvernadero.change_screen2(P_CtrlTemperatura);
   menuInvernadero.set_focusedLine(0);
   // delay(100);
 }
@@ -334,7 +342,7 @@ void fn_ctrlTemp_Status()
     strncpy(temp_estado_ctrl_text, string_on, sizeof(string_on));
   else
     strncpy(temp_estado_ctrl_text, string_off, sizeof(string_off));
-  menuInvernadero.change_screen(4);
+  menuInvernadero.change_screen2(P_CtrlTemperatura_ctrlStatus);
   menuInvernadero.set_focusedLine(0);
   // delay(100);
 }
@@ -342,11 +350,7 @@ void fn_ctrlTemp_Status()
 void fn_ctrlTemp_Temp()
 {
   fcline_menuAnterior = menuInvernadero.get_focusedLine();
-  if (temp_estado_ctrl)
-    strncpy(temp_estado_ctrl_text, string_on, sizeof(string_on));
-  else
-    strncpy(temp_estado_ctrl_text, string_off, sizeof(string_off));
-  menuInvernadero.change_screen(5);
+  menuInvernadero.change_screen2(P_CtrlTemperatura_ctrlTemp);
   menuInvernadero.set_focusedLine(0);
   // delay(100);
 }
@@ -376,13 +380,6 @@ void fn_grabar()
     strncpy(grabar_temp_modo_text, string_man, sizeof(string_man));
   menuInvernadero.change_screen2(7);
   menuInvernadero.set_focusedLine(0);
-  // delay(100);
-}
-
-void fn_principal()
-{
-  menuInvernadero.change_screen2(1);
-  menuInvernadero.set_focusedLine(fcline_menuAnterior);
   // delay(100);
 }
 
@@ -566,7 +563,7 @@ void setup() {
 
   pantallaGrabar.set_focusPosition(Position::LEFT);
   pantallaGrabar.set_displayLineCount(2);
-  menuInvernadero.add_screen(pantallaGrabar); // pantalla 7
+  menuInvernadero.add_screen(pantallaGrabar); 
 
   //menuGrabar_temp
   pantallaGrabar_temp.add_line(Grabar_temp_L1);
@@ -624,31 +621,31 @@ void setup() {
 
   pantallaGrabar_hum.set_focusPosition(Position::LEFT);
   pantallaGrabar_hum.set_displayLineCount(2);
-  menuInvernadero.add_screen(pantallaGrabar_hum); // pantalla 7
+  menuInvernadero.add_screen(pantallaGrabar_hum); 
 
   //pantallaGrabar_hum_modo
   pantallaGrabar_hum_modo.add_line(Grabar_hum_modo_L1);
   pantallaGrabar_hum_modo.add_line(Grabar_hum_modo_L2);
 
-  menuInvernadero.add_screen(pantallaGrabar_hum_modo); //pantalla 8
+  menuInvernadero.add_screen(pantallaGrabar_hum_modo);
 
   //pantallaGrabar_hum_manual
   pantallaGrabar_hum_manual.add_line(Grabar_hum_manual_L1);
   pantallaGrabar_hum_manual.add_line(Grabar_hum_manual_L2);
 
-  menuInvernadero.add_screen(pantallaGrabar_hum_manual); //pantalla 8
+  menuInvernadero.add_screen(pantallaGrabar_hum_manual);
 
   //pantallaGrabar_hum_horaenc
   pantallaGrabar_hum_horaenc.add_line(Grabar_hum_horaenc_L1);
   pantallaGrabar_hum_horaenc.add_line(Grabar_hum_horaenc_L2);
 
-  menuInvernadero.add_screen(pantallaGrabar_hum_horaenc); //pantalla 8
+  menuInvernadero.add_screen(pantallaGrabar_hum_horaenc);
 
   //pantallaGrabar_hum_horaapg
   pantallaGrabar_hum_horaapg.add_line(Grabar_hum_horaapg_L1);
   pantallaGrabar_hum_horaapg.add_line(Grabar_hum_horaapg_L2);
 
-  menuInvernadero.add_screen(pantallaGrabar_hum_horaapg); //pantalla 8
+  menuInvernadero.add_screen(pantallaGrabar_hum_horaapg);
 
   //menuGrabar_luz
   pantallaGrabar_luz.add_line(Grabar_luz_L1);
@@ -665,31 +662,31 @@ void setup() {
 
   pantallaGrabar_luz.set_focusPosition(Position::LEFT);
   pantallaGrabar_luz.set_displayLineCount(2);
-  menuInvernadero.add_screen(pantallaGrabar_luz); // pantalla 7
+  menuInvernadero.add_screen(pantallaGrabar_luz); 
 
   //pantallaGrabar_luz_modo
   pantallaGrabar_luz_modo.add_line(Grabar_luz_modo_L1);
   pantallaGrabar_luz_modo.add_line(Grabar_luz_modo_L2);
 
-  menuInvernadero.add_screen(pantallaGrabar_luz_modo); //pantalla 8
+  menuInvernadero.add_screen(pantallaGrabar_luz_modo);
 
   //pantallaGrabar_luz_manual
   pantallaGrabar_luz_manual.add_line(Grabar_luz_manual_L1);
   pantallaGrabar_luz_manual.add_line(Grabar_luz_manual_L2);
 
-  menuInvernadero.add_screen(pantallaGrabar_luz_manual); //pantalla 8
+  menuInvernadero.add_screen(pantallaGrabar_luz_manual);
 
   //pantallaGrabar_luz_horaenc
   pantallaGrabar_luz_horaenc.add_line(Grabar_luz_horaenc_L1);
   pantallaGrabar_luz_horaenc.add_line(Grabar_luz_horaenc_L2);
 
-  menuInvernadero.add_screen(pantallaGrabar_luz_horaenc); //pantalla 8
+  menuInvernadero.add_screen(pantallaGrabar_luz_horaenc);
 
   //pantallaGrabar_luz_horaapg
   pantallaGrabar_luz_horaapg.add_line(Grabar_luz_horaapg_L1);
   pantallaGrabar_luz_horaapg.add_line(Grabar_luz_horaapg_L2);
 
-  menuInvernadero.add_screen(pantallaGrabar_luz_horaapg); //pantalla 8
+  menuInvernadero.add_screen(pantallaGrabar_luz_horaapg);
 
   //sistema de menus
   menuInvernadero.init();
