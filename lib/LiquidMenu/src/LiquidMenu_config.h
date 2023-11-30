@@ -60,16 +60,16 @@ used in the library, also configures the debugging messages.
 
 
 /// Configures the number of available variables per line.
-const uint8_t MAX_VARIABLES = 2; ///< @note Default: 5
+const uint8_t MAX_VARIABLES = 4; ///< @note Default: 5
 
 /// Configures the number of available functions per line.
 const uint8_t MAX_FUNCTIONS = 2; ///< @note Default: 8
 
 /// Configures the number of available lines per screen.
-const uint8_t MAX_LINES = 5; ///< @note Default: 12
+const uint8_t MAX_LINES = 6; ///< @note Default: 12
 
 /// Configures the number of available screens per menu.
-const uint8_t MAX_SCREENS = 5; ///< @note Default: 14
+const uint8_t MAX_SCREENS = 12; ///< @note Default: 14
 
 /// Configures the number of available menus per menus system.
 const uint8_t MAX_MENUS = 2; ///< @note Default: 8

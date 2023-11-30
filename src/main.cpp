@@ -18,17 +18,48 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 
 // ------ Variables
-int temp_sen = 0;
+
 int hum_sen = 0;
-unsigned int temp_ctrl = 0;
 unsigned int hum_ctrl = 0;
+
+int temp_sen = 0;
+unsigned int temp_ctrl = 0;
 bool temp_estado_ctrl = false;
 char temp_estado_ctrl_text[4]; // {'O', 'F', 'F', '\0'}
-char luz_estado_ctrl_text[4]; // {'O', 'F', 'F', '\0'}
-char string_on[] = "Act";
-char string_off[] = "Des";
-bool luz_estado_ctrl = false;
 
+char luz_modo_text[4]; // {'M', 'A', 'N', '\0'}
+bool luz_modo = false;
+char luz_manual_text[4]; // {'O', 'F', 'F', '\0'}
+bool luz_manual = false;
+int luz_hora_enc[2] = {0,0}; //{hora,min}
+int luz_hora_apag[2] = {0,0}; //{hora,min}
+
+char grabar_temp_modo_text[4]; // {'M', 'A', 'N', '\0'}
+bool grabar_temp_modo = false;
+char grabar_temp_manual_text[4]; // {'O', 'F', 'F', '\0'}
+bool grabar_temp_manual = false;
+int grabar_temp_hora_enc[2] = {0,0}; //{hora,min}
+int grabar_temp_hora_apag[2] = {0,0}; //{hora,min}
+
+char grabar_hum_modo_text[4]; // {'M', 'A', 'N', '\0'}
+bool grabar_hum_modo = false;
+char grabar_hum_manual_text[4]; // {'O', 'F', 'F', '\0'}
+bool grabar_hum_manual = false;
+int grabar_hum_hora_enc[2] = {0,0}; //{hora,min}
+int grabar_hum_hora_apag[2] = {0,0}; //{hora,min}
+
+char grabar_luz_modo_text[4]; // {'M', 'A', 'N', '\0'}
+bool grabar_luz_modo = false;
+char grabar_luz_manual_text[4]; // {'O', 'F', 'F', '\0'}
+bool grabar_luz_manual = false;
+int grabar_luz_hora_enc[2] = {0,0}; //{hora,min}
+int grabar_luz_hora_apag[2] = {0,0}; //{hora,min}
+
+
+char string_on[] = "ON";
+char string_off[] = "OFF";
+char string_man[] = "MAN";
+char string_auto[] = "AUTO";
 // ------ Configuración de Menus/submenus
 //Menus
 LiquidScreen pantallaMenuPrincipal;
@@ -37,9 +68,56 @@ LiquidScreen pantallaCtrlTemperatura;
 LiquidScreen pantallaCtrlTemperatura_ctrlStatus;
 LiquidScreen pantallaCtrlTemperatura_ctrlTemp;
 LiquidScreen pantallaCtrlLuz;
-LiquidScreen pantallaCtrlLuz_ctrlStatus;
-LiquidScreen pantallaCtrlLuz_ctrlLuz;
+LiquidScreen pantallaCtrlLuz_modo;
+LiquidScreen pantallaCtrlLuz_manual;
+LiquidScreen pantallaCtrlLuz_horaLuz_enc;
+LiquidScreen pantallaCtrlLuz_horaLuz_apag;
 LiquidScreen pantallaGrabar;
+LiquidScreen pantallaGrabar_temp;
+LiquidScreen pantallaGrabar_temp_modo;
+LiquidScreen pantallaGrabar_temp_manual;
+LiquidScreen pantallaGrabar_temp_horaenc;
+LiquidScreen pantallaGrabar_temp_horaapg;
+LiquidScreen pantallaGrabar_hum;
+LiquidScreen pantallaGrabar_hum_modo;
+LiquidScreen pantallaGrabar_hum_manual;
+LiquidScreen pantallaGrabar_hum_horaenc;
+LiquidScreen pantallaGrabar_hum_horaapg;
+LiquidScreen pantallaGrabar_luz;
+LiquidScreen pantallaGrabar_luz_modo;
+LiquidScreen pantallaGrabar_luz_manual;
+LiquidScreen pantallaGrabar_luz_horaenc;
+LiquidScreen pantallaGrabar_luz_horaapg;
+
+// enumerar el orden de las pantallas, indicandoles un numero
+enum pantalla_num {
+  P_MenuPrincipal,
+  P_MenuMonitorizar,
+  P_CtrlTemperatura,
+  P_CtrlTemperatura_ctrlStatus,
+  P_CtrlTemperatura_ctrlTemp,
+  P_CtrlLuz,
+  P_CtrlLuz_modo,
+  P_CtrlLuz_manual,
+  P_CtrlLuz_horaLuz_enc,
+  P_CtrlLuz_horaLuz_apag,
+  P_Grabar,
+  P_Grabar_temp,
+  P_Grabar_temp_modo,
+  P_Grabar_temp_manual,
+  P_Grabar_temp_horaenc,
+  P_Grabar_temp_horaapg,
+  P_Grabar_hum,
+  P_Grabar_hum_modo,
+  P_Grabar_hum_manual,
+  P_Grabar_hum_horaenc,
+  P_Grabar_hum_horaapg,
+  P_Grabar_luz,
+  P_Grabar_luz_modo,
+  P_Grabar_luz_manual,
+  P_Grabar_luz_horaenc,
+  P_Grabar_luz_horaapg,
+};
 
 //menuPrincipal
 LiquidLine Prin_L1(1, 0, "Monitorizar");
@@ -49,9 +127,9 @@ LiquidLine Prin_L4(1, 1, "Grabar Datos");
 
 //menuMonitorizar
 LiquidLine Mon_L1_1(0, 0, "T:");
-LiquidLine Mon_L1_2(2, 0, temp_sen, "\337", temp_ctrl, "\337");
+LiquidLine Mon_L1_2(2, 0, temp_sen, "/", temp_ctrl, "\337");
 LiquidLine Mon_L1_3(8, 0, "H:");
-LiquidLine Mon_L1_4(10, 0, hum_sen, "%", hum_ctrl, "%");
+LiquidLine Mon_L1_4(10, 0, hum_sen, "/", hum_ctrl, "%");
 LiquidLine Mon_L2_1(0, 1, "CtrlTemp:  ", temp_estado_ctrl_text);
 
 //menuCtrlTemperatura
@@ -59,15 +137,111 @@ LiquidLine CtrlTemp_L1(1, 0, "Menu Principal");
 LiquidLine CtrlTemp_L2(1, 1, "Ctrl Temp: ", temp_estado_ctrl_text);
 LiquidLine CtrlTemp_L3(1, 1, "Temperatura:", temp_ctrl, "\337");
 
+//pantallaCtrlTemperatura_ctrlStatus
+LiquidLine CtrlTemp_status_L1(1, 0, "Ctrl Temperatura:");
+LiquidLine CtrlTemp_status_L2(1, 1, temp_estado_ctrl_text);
+
+//pantallaCtrlTemperatura_ctrlTemp
+LiquidLine CtrlTemp_temp_L1(1, 0, "Temperatura:");
+LiquidLine CtrlTemp_temp_L2(1, 1, temp_ctrl);
+
 //menuCtrlLuz
 LiquidLine CtrlLuz_L1(1, 0, "Menu Principal");
-LiquidLine CtrlLuz_L2(1, 1, "Ctrl Luz: ", "Des");
+LiquidLine CtrlLuz_L2(1, 1, "Modo: ", luz_modo_text);
+LiquidLine CtrlLuz_L3(1, 1, "Manual: ", luz_manual_text);
+LiquidLine CtrlLuz_L4(1, 1, "Hora enc: ", "DEF");
+LiquidLine CtrlLuz_L5(1, 1, "Hora apag: ", "DEF");
+
+//pantallaCtrlLuz_Modo
+LiquidLine CtrlLuz_modo_L1(1, 0, "Modo:");
+LiquidLine CtrlLuz_modo_L2(1, 1, luz_modo_text);
+
+//pantallaCtrlLuz_Manual
+LiquidLine CtrlLuz_manual_L1(1, 0, "Encender Luz:");
+LiquidLine CtrlLuz_manual_L2(1, 1, luz_manual_text);
+
+//pantallaCtrlLuz_horaenc
+LiquidLine CtrlLuz_horaenc_L1(1, 0, "hora encender:");
+LiquidLine CtrlLuz_horaenc_L2(1, 1, "00:00");
+
+//pantallaCtrlLuz_horaapg
+LiquidLine CtrlLuz_horaapg_L1(1, 0, "hora apagar:");
+LiquidLine CtrlLuz_horaapg_L2(1, 1, "00:00");
 
 //menuGrabar
 LiquidLine Grabar_L1(1, 0, "Menu Principal");
-// LiquidLine Grabar_L2(1, 1, "Estado Rec:", luz_estado_ctrl_text);
-LiquidLine Grabar_L3(1, 1, "Temp Rec: ", "Des", "\337");
-LiquidLine Grabar_L4(1, 1, "Hum Rec:  ", "Des", "%");
+LiquidLine Grabar_L2(1, 1, "Temperatura");
+LiquidLine Grabar_L3(1, 1, "Humedad");
+LiquidLine Grabar_L4(1, 1, "Luz");
+
+//menuGrabar_temp
+LiquidLine Grabar_temp_L1(1, 0, "Menu Grabar");
+LiquidLine Grabar_temp_L2(1, 1, "Modo: ", grabar_temp_modo_text);
+LiquidLine Grabar_temp_L3(1, 1, "Manual: ", grabar_temp_manual_text);
+LiquidLine Grabar_temp_L4(1, 1, "Hora enc: ", "DEF");
+LiquidLine Grabar_temp_L5(1, 1, "Hora apag: ", "DEF");
+
+//pantallaGrabar_temp_modo
+LiquidLine Grabar_temp_modo_L1(1, 0, "Modo:");
+LiquidLine Grabar_temp_modo_L2(1, 1, grabar_temp_modo_text);
+
+//pantallaGrabar_temp_manual
+LiquidLine Grabar_temp_manual_L1(1, 0, "Manual:");
+LiquidLine Grabar_temp_manual_L2(1, 1, grabar_temp_manual_text);
+
+//pantallaGrabar_temp_horaenc
+LiquidLine Grabar_temp_horaenc_L1(1, 0, "hora encender:");
+LiquidLine Grabar_temp_horaenc_L2(1, 1, "00:00");
+
+//pantallaGrabar_temp_horaapg
+LiquidLine Grabar_temp_horaapg_L1(1, 0, "hora apagar:");
+LiquidLine Grabar_temp_horaapg_L2(1, 1, "00:00");
+
+//menuGrabar_hum
+LiquidLine Grabar_hum_L1(1, 0, "Menu Grabar");
+LiquidLine Grabar_hum_L2(1, 1, "Modo: ", grabar_hum_modo_text);
+LiquidLine Grabar_hum_L3(1, 1, "Manual: ", grabar_hum_manual_text);
+LiquidLine Grabar_hum_L4(1, 1, "Hora enc: ", "DEF");
+LiquidLine Grabar_hum_L5(1, 1, "Hora apag: ", "DEF");
+
+//pantallaGrabar_hum_modo
+LiquidLine Grabar_hum_modo_L1(1, 0, "Modo:");
+LiquidLine Grabar_hum_modo_L2(1, 1, grabar_hum_modo_text);
+
+//pantallaGrabar_hum_manual
+LiquidLine Grabar_hum_manual_L1(1, 0, "Manual:");
+LiquidLine Grabar_hum_manual_L2(1, 1, grabar_hum_manual_text);
+
+//pantallaGrabar_hum_horaenc
+LiquidLine Grabar_hum_horaenc_L1(1, 0, "hora encender:");
+LiquidLine Grabar_hum_horaenc_L2(1, 1, "00:00");
+
+//pantallaGrabar_hum_horaapg
+LiquidLine Grabar_hum_horaapg_L1(1, 0, "hora apagar:");
+LiquidLine Grabar_hum_horaapg_L2(1, 1, "00:00");
+
+//menuGrabar_hum
+LiquidLine Grabar_luz_L1(1, 0, "Menu Grabar");
+LiquidLine Grabar_luz_L2(1, 1, "Modo: ", grabar_luz_modo_text);
+LiquidLine Grabar_luz_L3(1, 1, "Manual: ", grabar_luz_manual_text);
+LiquidLine Grabar_luz_L4(1, 1, "Hora enc: ", "DEF");
+LiquidLine Grabar_luz_L5(1, 1, "Hora apag: ", "DEF");
+
+//pantallaGrabar_luz_modo
+LiquidLine Grabar_luz_modo_L1(1, 0, "Modo:");
+LiquidLine Grabar_luz_modo_L2(1, 1, grabar_luz_modo_text);
+
+//pantallaGrabar_luz_manual
+LiquidLine Grabar_luz_manual_L1(1, 0, "Manual:");
+LiquidLine Grabar_luz_manual_L2(1, 1, grabar_luz_manual_text);
+
+//pantallaGrabar_luz_horaenc
+LiquidLine Grabar_luz_horaenc_L1(1, 0, "hora encender:");
+LiquidLine Grabar_luz_horaenc_L2(1, 1, "00:00");
+
+//pantallaGrabar_luz_horaapg
+LiquidLine Grabar_luz_horaapg_L1(1, 0, "hora apagar:");
+LiquidLine Grabar_luz_horaapg_L2(1, 1, "00:00");
 
 LiquidMenu menuInvernadero (lcd, pantallaMenuPrincipal);
 
@@ -103,6 +277,7 @@ const int chipSelect = D8;
 // will quickly become a bigger number than can be stored in an int.
 
 long interval = 100;  // interval at which to blink (milliseconds)
+
 
 void blankFunction()
 {
@@ -152,14 +327,42 @@ void fn_ctrlTemp()
   // delay(100);
 }
 
+void fn_ctrlTemp_Status()
+{
+  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  if (temp_estado_ctrl)
+    strncpy(temp_estado_ctrl_text, string_on, sizeof(string_on));
+  else
+    strncpy(temp_estado_ctrl_text, string_off, sizeof(string_off));
+  menuInvernadero.change_screen(4);
+  menuInvernadero.set_focusedLine(0);
+  // delay(100);
+}
+
+void fn_ctrlTemp_Temp()
+{
+  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  if (temp_estado_ctrl)
+    strncpy(temp_estado_ctrl_text, string_on, sizeof(string_on));
+  else
+    strncpy(temp_estado_ctrl_text, string_off, sizeof(string_off));
+  menuInvernadero.change_screen(5);
+  menuInvernadero.set_focusedLine(0);
+  // delay(100);
+}
+
 void fn_ctrlLuz()
 {
   fcline_menuAnterior = menuInvernadero.get_focusedLine();
-  if (luz_estado_ctrl)
-    strncpy(luz_estado_ctrl_text, string_on, sizeof(string_on));
+  if (luz_modo)
+    strncpy(luz_modo_text, string_auto, sizeof(string_auto));
   else
-    strncpy(luz_estado_ctrl_text, string_off, sizeof(string_off));
-  menuInvernadero.change_screen2(4);
+    strncpy(luz_modo_text, string_man, sizeof(string_man));
+  if (luz_manual)
+    strncpy(luz_manual_text, string_on, sizeof(string_on));
+  else
+    strncpy(luz_manual_text, string_off, sizeof(string_off));
+  menuInvernadero.change_screen2(6);
   menuInvernadero.set_focusedLine(0);
   // delay(100);
 }
@@ -167,11 +370,11 @@ void fn_ctrlLuz()
 void fn_grabar()
 {
   fcline_menuAnterior = menuInvernadero.get_focusedLine();
-  if (luz_estado_ctrl)
-    strncpy(luz_estado_ctrl_text, string_on, sizeof(string_on));
+  if (grabar_temp_modo)
+    strncpy(grabar_temp_modo_text, string_auto, sizeof(string_auto));
   else
-    strncpy(luz_estado_ctrl_text, string_off, sizeof(string_off));
-  menuInvernadero.change_screen2(5);
+    strncpy(grabar_temp_modo_text, string_man, sizeof(string_man));
+  menuInvernadero.change_screen2(7);
   menuInvernadero.set_focusedLine(0);
   // delay(100);
 }
@@ -186,6 +389,7 @@ void fn_principal()
 
 void selectOption(){
   if(digitalRead(encoderBotonPin)==LOW){
+    delay(20);
     while (digitalRead(encoderBotonPin)==LOW);
     delay(100);
 
@@ -194,13 +398,12 @@ void selectOption(){
     else
     {
       pantalla_anterior();
-      // menuInvernadero.change_screen2(1);
-      // menuInvernadero.set_focusedLine(0);
     }
     menuInvernadero.update();
-    
   }
 }
+
+
 
 
 void setup() {
@@ -282,7 +485,7 @@ void setup() {
   pantallaMenuMonitorizar.add_line(Mon_L1_3);
   pantallaMenuMonitorizar.add_line(Mon_L1_4);
   pantallaMenuMonitorizar.add_line(Mon_L2_1);
-  menuInvernadero.add_screen(pantallaMenuMonitorizar); // pantalla 2 
+  menuInvernadero.add_screen(pantallaMenuMonitorizar);
 
   //menuCtrlTemperatura
   pantallaCtrlTemperatura.add_line(CtrlTemp_L1);
@@ -290,40 +493,203 @@ void setup() {
   pantallaCtrlTemperatura.add_line(CtrlTemp_L3);
 
   CtrlTemp_L1.attach_function(1, fn_principal);
-  CtrlTemp_L2.attach_function(1, blankFunction);
-  CtrlTemp_L3.attach_function(1, blankFunction);
+  CtrlTemp_L2.attach_function(1, fn_ctrlTemp_Status);
+  CtrlTemp_L3.attach_function(1, fn_ctrlTemp_Temp);
 
   pantallaCtrlTemperatura.set_focusPosition(Position::LEFT);
   pantallaCtrlTemperatura.set_displayLineCount(2);
-  menuInvernadero.add_screen(pantallaCtrlTemperatura); // pantalla 3
+  menuInvernadero.add_screen(pantallaCtrlTemperatura);
+
+  // menuCtrlTemperatura_ctrlStatus
+  pantallaCtrlTemperatura_ctrlStatus.add_line(CtrlTemp_status_L1);
+  pantallaCtrlTemperatura_ctrlStatus.add_line(CtrlTemp_status_L2);
+
+  menuInvernadero.add_screen(pantallaCtrlTemperatura_ctrlStatus);
+
+  //menuCtrlTemperatura_ctrlTemp
+  pantallaCtrlTemperatura_ctrlTemp.add_line(CtrlTemp_temp_L1);
+  pantallaCtrlTemperatura_ctrlTemp.add_line(CtrlTemp_temp_L2);
+
+  menuInvernadero.add_screen(pantallaCtrlTemperatura_ctrlTemp);
 
   //menuCtrlLuz
   pantallaCtrlLuz.add_line(CtrlLuz_L1);
   pantallaCtrlLuz.add_line(CtrlLuz_L2);
-  // pantallaCtrlLuz.add_line(CtrlLuz_L3);
+  pantallaCtrlLuz.add_line(CtrlLuz_L3);
+  pantallaCtrlLuz.add_line(CtrlLuz_L4);
+  pantallaCtrlLuz.add_line(CtrlLuz_L5);
 
   CtrlLuz_L1.attach_function(1, fn_principal);
   CtrlLuz_L2.attach_function(1, blankFunction);
-  // CtrlLuz_L3.attach_function(1, blankFunction);
+  CtrlLuz_L3.attach_function(1, blankFunction);
+  CtrlLuz_L4.attach_function(1, blankFunction);
+  CtrlLuz_L5.attach_function(1, blankFunction);
 
   pantallaCtrlLuz.set_focusPosition(Position::LEFT);
   pantallaCtrlLuz.set_displayLineCount(2);
-  menuInvernadero.add_screen(pantallaCtrlLuz); // pantalla 4
+  menuInvernadero.add_screen(pantallaCtrlLuz); 
+
+  // pantallaCtrlLuz_Modo
+  pantallaCtrlLuz_modo.add_line(CtrlLuz_modo_L1);
+  pantallaCtrlLuz_modo.add_line(CtrlLuz_modo_L2);
+
+  menuInvernadero.add_screen(pantallaCtrlLuz_modo);
+
+  //pantallaCtrlLuz_Manual
+  pantallaCtrlLuz_manual.add_line(CtrlLuz_manual_L1);
+  pantallaCtrlLuz_manual.add_line(CtrlLuz_manual_L2);
+
+  menuInvernadero.add_screen(pantallaCtrlLuz_manual);
+
+  //pantallaCtrlLuz_horaenc
+  pantallaCtrlLuz_horaLuz_enc.add_line(CtrlLuz_horaenc_L1);
+  pantallaCtrlLuz_horaLuz_enc.add_line(CtrlLuz_horaenc_L2);
+
+  menuInvernadero.add_screen(pantallaCtrlLuz_horaLuz_enc); 
+
+  //pantallaCtrlLuz_horaapg
+  pantallaCtrlLuz_horaLuz_apag.add_line(CtrlLuz_horaapg_L1);
+  pantallaCtrlLuz_horaLuz_apag.add_line(CtrlLuz_horaapg_L2);
+
+  menuInvernadero.add_screen(pantallaCtrlLuz_horaLuz_apag); 
 
   //menuGrabar
   pantallaGrabar.add_line(Grabar_L1);
-  // pantallaGrabar.add_line(Grabar_L2);
+  pantallaGrabar.add_line(Grabar_L2);
   pantallaGrabar.add_line(Grabar_L3);
   pantallaGrabar.add_line(Grabar_L4);
 
   Grabar_L1.attach_function(1, fn_principal);
-  // Grabar_L2.attach_function(1, blankFunction);
+  Grabar_L2.attach_function(1, blankFunction);
   Grabar_L3.attach_function(1, blankFunction);
   Grabar_L4.attach_function(1, blankFunction);
 
   pantallaGrabar.set_focusPosition(Position::LEFT);
   pantallaGrabar.set_displayLineCount(2);
-  menuInvernadero.add_screen(pantallaGrabar); // pantalla 5
+  menuInvernadero.add_screen(pantallaGrabar); // pantalla 7
+
+  //menuGrabar_temp
+  pantallaGrabar_temp.add_line(Grabar_temp_L1);
+  pantallaGrabar_temp.add_line(Grabar_temp_L2);
+  pantallaGrabar_temp.add_line(Grabar_temp_L3);
+  pantallaGrabar_temp.add_line(Grabar_temp_L4);
+  pantallaGrabar_temp.add_line(Grabar_temp_L5);
+
+  Grabar_temp_L1.attach_function(1, fn_principal);
+  Grabar_temp_L2.attach_function(1, blankFunction);
+  Grabar_temp_L3.attach_function(1, blankFunction);
+  Grabar_temp_L4.attach_function(1, blankFunction);
+  Grabar_temp_L5.attach_function(1, blankFunction);
+
+  pantallaGrabar_temp.set_focusPosition(Position::LEFT);
+  pantallaGrabar_temp.set_displayLineCount(2);
+  menuInvernadero.add_screen(pantallaGrabar_temp);
+
+  //pantallaGrabar_temp_modo
+  pantallaGrabar_temp_modo.add_line(Grabar_temp_modo_L1);
+  pantallaGrabar_temp_modo.add_line(Grabar_temp_modo_L2);
+
+  menuInvernadero.add_screen(pantallaGrabar_temp_modo); 
+
+  //pantallaGrabar_temp_manual
+  pantallaGrabar_temp_manual.add_line(Grabar_temp_manual_L1);
+  pantallaGrabar_temp_manual.add_line(Grabar_temp_manual_L2);
+
+  menuInvernadero.add_screen(pantallaGrabar_temp_manual); 
+
+  //pantallaGrabar_temp_horaenc
+  pantallaGrabar_temp_horaenc.add_line(Grabar_temp_horaenc_L1);
+  pantallaGrabar_temp_horaenc.add_line(Grabar_temp_horaenc_L2);
+
+  menuInvernadero.add_screen(pantallaGrabar_temp_horaenc); 
+
+  //pantallaGrabar_temp_horaapg
+  pantallaGrabar_temp_horaapg.add_line(Grabar_temp_horaapg_L1);
+  pantallaGrabar_temp_horaapg.add_line(Grabar_temp_horaapg_L2);
+
+  menuInvernadero.add_screen(pantallaGrabar_temp_horaapg); 
+
+  //menuGrabar_hum
+  pantallaGrabar_hum.add_line(Grabar_hum_L1);
+  pantallaGrabar_hum.add_line(Grabar_hum_L2);
+  pantallaGrabar_hum.add_line(Grabar_hum_L3);
+  pantallaGrabar_hum.add_line(Grabar_hum_L4);
+  pantallaGrabar_hum.add_line(Grabar_hum_L5);
+
+  Grabar_hum_L1.attach_function(1, fn_principal);
+  Grabar_hum_L2.attach_function(1, blankFunction);
+  Grabar_hum_L3.attach_function(1, blankFunction);
+  Grabar_hum_L4.attach_function(1, blankFunction);
+  Grabar_hum_L5.attach_function(1, blankFunction);
+
+  pantallaGrabar_hum.set_focusPosition(Position::LEFT);
+  pantallaGrabar_hum.set_displayLineCount(2);
+  menuInvernadero.add_screen(pantallaGrabar_hum); // pantalla 7
+
+  //pantallaGrabar_hum_modo
+  pantallaGrabar_hum_modo.add_line(Grabar_hum_modo_L1);
+  pantallaGrabar_hum_modo.add_line(Grabar_hum_modo_L2);
+
+  menuInvernadero.add_screen(pantallaGrabar_hum_modo); //pantalla 8
+
+  //pantallaGrabar_hum_manual
+  pantallaGrabar_hum_manual.add_line(Grabar_hum_manual_L1);
+  pantallaGrabar_hum_manual.add_line(Grabar_hum_manual_L2);
+
+  menuInvernadero.add_screen(pantallaGrabar_hum_manual); //pantalla 8
+
+  //pantallaGrabar_hum_horaenc
+  pantallaGrabar_hum_horaenc.add_line(Grabar_hum_horaenc_L1);
+  pantallaGrabar_hum_horaenc.add_line(Grabar_hum_horaenc_L2);
+
+  menuInvernadero.add_screen(pantallaGrabar_hum_horaenc); //pantalla 8
+
+  //pantallaGrabar_hum_horaapg
+  pantallaGrabar_hum_horaapg.add_line(Grabar_hum_horaapg_L1);
+  pantallaGrabar_hum_horaapg.add_line(Grabar_hum_horaapg_L2);
+
+  menuInvernadero.add_screen(pantallaGrabar_hum_horaapg); //pantalla 8
+
+  //menuGrabar_luz
+  pantallaGrabar_luz.add_line(Grabar_luz_L1);
+  pantallaGrabar_luz.add_line(Grabar_luz_L2);
+  pantallaGrabar_luz.add_line(Grabar_luz_L3);
+  pantallaGrabar_luz.add_line(Grabar_luz_L4);
+  pantallaGrabar_luz.add_line(Grabar_luz_L5);
+
+  Grabar_luz_L1.attach_function(1, fn_principal);
+  Grabar_luz_L2.attach_function(1, blankFunction);
+  Grabar_luz_L3.attach_function(1, blankFunction);
+  Grabar_luz_L4.attach_function(1, blankFunction);
+  Grabar_luz_L5.attach_function(1, blankFunction);
+
+  pantallaGrabar_luz.set_focusPosition(Position::LEFT);
+  pantallaGrabar_luz.set_displayLineCount(2);
+  menuInvernadero.add_screen(pantallaGrabar_luz); // pantalla 7
+
+  //pantallaGrabar_luz_modo
+  pantallaGrabar_luz_modo.add_line(Grabar_luz_modo_L1);
+  pantallaGrabar_luz_modo.add_line(Grabar_luz_modo_L2);
+
+  menuInvernadero.add_screen(pantallaGrabar_luz_modo); //pantalla 8
+
+  //pantallaGrabar_luz_manual
+  pantallaGrabar_luz_manual.add_line(Grabar_luz_manual_L1);
+  pantallaGrabar_luz_manual.add_line(Grabar_luz_manual_L2);
+
+  menuInvernadero.add_screen(pantallaGrabar_luz_manual); //pantalla 8
+
+  //pantallaGrabar_luz_horaenc
+  pantallaGrabar_luz_horaenc.add_line(Grabar_luz_horaenc_L1);
+  pantallaGrabar_luz_horaenc.add_line(Grabar_luz_horaenc_L2);
+
+  menuInvernadero.add_screen(pantallaGrabar_luz_horaenc); //pantalla 8
+
+  //pantallaGrabar_luz_horaapg
+  pantallaGrabar_luz_horaapg.add_line(Grabar_luz_horaapg_L1);
+  pantallaGrabar_luz_horaapg.add_line(Grabar_luz_horaapg_L2);
+
+  menuInvernadero.add_screen(pantallaGrabar_luz_horaapg); //pantalla 8
 
   //sistema de menus
   menuInvernadero.init();
