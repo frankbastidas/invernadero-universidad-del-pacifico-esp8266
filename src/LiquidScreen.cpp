@@ -48,28 +48,32 @@ SOFTWARE.
 
 
 LiquidScreen::LiquidScreen()
-	: _lineCount(0), _focus(0), _hidden(false) {}
+	: _lineCount(0), _focus(0), _hidden(false) ,_State_encoder(enc_nothing) {}
 
 LiquidScreen::LiquidScreen(LiquidLine &liquidLine)
 	: LiquidScreen() {
 	add_line(liquidLine);
+	_State_encoder = enc_nothing;
 }
 
 LiquidScreen::LiquidScreen(LiquidLine &liquidLine1, LiquidLine &liquidLine2)
 	: LiquidScreen(liquidLine1) {
 	add_line(liquidLine2);
+	_State_encoder = enc_nothing;
 }
 
 LiquidScreen::LiquidScreen(LiquidLine &liquidLine1, LiquidLine &liquidLine2,
                            LiquidLine &liquidLine3)
 	: LiquidScreen(liquidLine1, liquidLine2) {
 	add_line(liquidLine3);
+	_State_encoder = enc_nothing;
 }
 
 LiquidScreen::LiquidScreen(LiquidLine &liquidLine1, LiquidLine &liquidLine2,
                            LiquidLine &liquidLine3, LiquidLine &liquidLine4)
 	: LiquidScreen(liquidLine1, liquidLine2, liquidLine3) {
 	add_line(liquidLine4);
+	_State_encoder = enc_nothing;
 }
 
 bool LiquidScreen::add_line(LiquidLine &liquidLine) {
@@ -100,6 +104,10 @@ bool LiquidScreen::add_line(LiquidLine &liquidLine) {
 		return false;
 	}
 
+}
+
+void LiquidScreen::set_encoder_interaction(state_encoder stat_enc) {
+	_State_encoder = stat_enc;
 }
 
 bool LiquidScreen::set_focusPosition(Position position) {
@@ -195,6 +203,10 @@ bool LiquidScreen::set_focusedLine(uint8_t lineIndex) {
 	} else {
 		return false;
 	}
+}
+
+LiquidScreen::state_encoder LiquidScreen::get_encoder_interaction() const {
+	return _State_encoder;
 }
 
 uint8_t LiquidScreen::get_focusedLine() const {

@@ -602,6 +602,13 @@ class LiquidScreen {
 
 public:
 
+  enum state_encoder{
+  enc_nothing,
+  enc_scrolling,
+  enc_switch,
+  enc_polling
+  };
+
   /// @name Constructors
   ///@{
 
@@ -648,6 +655,8 @@ public:
   /// @name Public methods
   ///@{
 
+  state_encoder get_encoder_interaction() const;
+
   /// Adds a LiquidLine object to the screen.
   /**
   @param &liquidLine - pointer to a LiquidLine object
@@ -661,6 +670,8 @@ public:
   @see MAX_LINES
   */
   bool add_line(LiquidLine &liquidLine);
+
+  void set_encoder_interaction(state_encoder stat_enc);
 
   /// Sets the focus position for the whole screen at once.
   /**
@@ -707,7 +718,12 @@ public:
   void hide(bool hide);
   ///@}
 
+  
+
 private:
+
+  state_encoder _State_encoder;
+
   /// Prints the lines pointed by the screen.
   /**
   Calls the `LiquidLine::print(DisplayClass *p_liquidCrystal, bool isFocused)`
