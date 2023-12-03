@@ -606,7 +606,8 @@ public:
   enc_nothing,
   enc_scrolling,
   enc_switch,
-  enc_polling
+  enc_polling,
+  enc_time
   };
 
   /// @name Constructors
@@ -716,6 +717,13 @@ public:
   @see LiquidMenu::change_screen(uint8_t number)
   */
   void hide(bool hide);
+
+  /// Directly select focused line.
+  /**
+  @param lineIndex - index of the focused line
+  @return true: on success, false: when the selected line doesn't exist or it isn't focusable
+  */
+  bool set_focusedLine(uint8_t lineIndex);
   ///@}
 
   
@@ -745,13 +753,6 @@ private:
   @param forward - true for forward, false for backward
   */
   void switch_focus(bool forward = true);
-
-  /// Directly select focused line.
-  /**
-  @param lineIndex - index of the focused line
-  @return true: on success, false: when the selected line doesn't exist or it isn't focusable
-  */
-  bool set_focusedLine(uint8_t lineIndex);
 
   /// Get the index of the currently focused line.
   /**

@@ -8,7 +8,7 @@
 // #include <Arduino.h>
 
 // ------ Configuración del LCD
-LiquidCrystal_I2C lcd(0x27, 16, 2);
+LiquidCrystal_I2C lcd(0x27, 20, 4);
 
 #if defined(ESP8266)
 // Example for ESP8266 NodeMCU with input signals on pin D5 and D6
@@ -18,6 +18,9 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 
 // ------ Variables
+int lcd_pos_hora=0;
+
+int time_select = 0;
 
 int hum_sen = 0;
 unsigned int hum_ctrl = 0;
@@ -54,6 +57,7 @@ char grabar_luz_manual_text[4]; // {'O', 'F', 'F', '\0'}
 bool grabar_luz_manual = false;
 int grabar_luz_hora_enc[2] = {0,0}; //{hora,min}
 int grabar_luz_hora_apag[2] = {0,0}; //{hora,min}
+
 
 
 char string_on[] = "ON";
@@ -129,8 +133,8 @@ enum pantalla_num {
 //menuPrincipal
 LiquidLine Prin_L1(1, 0, "Monitorizar");
 LiquidLine Prin_L2(1, 1, "Control Temp");
-LiquidLine Prin_L3(1, 0, "Control Luz");
-LiquidLine Prin_L4(1, 1, "Grabar Datos");
+LiquidLine Prin_L3(1, 2, "Control Luz");
+LiquidLine Prin_L4(1, 3, "Grabar Datos");
 
 //menuMonitorizar
 LiquidLine Mon_L1_1(0, 0, "T:");
@@ -142,7 +146,7 @@ LiquidLine Mon_L2_1(0, 1, "CtrlTemp:  ", temp_estado_ctrl_text);
 //menuCtrlTemperatura
 LiquidLine CtrlTemp_L1(1, 0, "Menu Principal");
 LiquidLine CtrlTemp_L2(1, 1, "Ctrl Temp: ", temp_estado_ctrl_text);
-LiquidLine CtrlTemp_L3(1, 1, "Temperatura:", temp_ctrl, "\337");
+LiquidLine CtrlTemp_L3(1, 2, "Temperatura:", temp_ctrl, "\337");
 
 //pantallaCtrlTemperatura_ctrlStatus
 LiquidLine CtrlTemp_status_L1(1, 0, "Ctrl Temperatura:");
@@ -155,9 +159,9 @@ LiquidLine CtrlTemp_temp_L2(1, 1, temp_ctrl);
 //menuCtrlLuz
 LiquidLine CtrlLuz_L1(1, 0, "Menu Principal");
 LiquidLine CtrlLuz_L2(1, 1, "Modo: ", luz_modo_text);
-LiquidLine CtrlLuz_L3(1, 1, "Manual: ", luz_manual_text);
-LiquidLine CtrlLuz_L4(1, 1, "Hora enc: ", "DEF");
-LiquidLine CtrlLuz_L5(1, 1, "Hora apag: ", "DEF");
+LiquidLine CtrlLuz_L3(1, 2, "Manual: ", luz_manual_text);
+LiquidLine CtrlLuz_L4(1, 3, "Hora enc: ", luz_hora_enc[0],":",luz_hora_enc[1]);
+LiquidLine CtrlLuz_L5(1, 4, "Hora apag: ", luz_hora_apag[0],":",luz_hora_apag[1]);
 
 //pantallaCtrlLuz_Modo
 LiquidLine CtrlLuz_modo_L1(1, 0, "Modo:");
@@ -169,24 +173,24 @@ LiquidLine CtrlLuz_manual_L2(1, 1, luz_manual_text);
 
 //pantallaCtrlLuz_horaenc
 LiquidLine CtrlLuz_horaenc_L1(1, 0, "hora encender:");
-LiquidLine CtrlLuz_horaenc_L2(1, 1, "00:00");
+LiquidLine CtrlLuz_horaenc_L2(1, 1, luz_hora_enc[0] ,":", luz_hora_enc[1]);
 
 //pantallaCtrlLuz_horaapg
 LiquidLine CtrlLuz_horaapg_L1(1, 0, "hora apagar:");
-LiquidLine CtrlLuz_horaapg_L2(1, 1, "00:00");
+LiquidLine CtrlLuz_horaapg_L2(1, 1, luz_hora_apag[0] ,":", luz_hora_apag[1]);
 
 //menuGrabar
 LiquidLine Grabar_L1(1, 0, "Menu Principal");
 LiquidLine Grabar_L2(1, 1, "Temperatura");
-LiquidLine Grabar_L3(1, 1, "Humedad");
-LiquidLine Grabar_L4(1, 1, "Luz");
+LiquidLine Grabar_L3(1, 2, "Humedad");
+LiquidLine Grabar_L4(1, 3, "Luz");
 
 //menuGrabar_temp
 LiquidLine Grabar_temp_L1(1, 0, "Menu Grabar");
-LiquidLine Grabar_temp_L2(1, 1, "Modo: ", grabar_temp_modo_text);
-LiquidLine Grabar_temp_L3(1, 1, "Manual: ", grabar_temp_manual_text);
-LiquidLine Grabar_temp_L4(1, 1, "Hora enc: ", "DEF");
-LiquidLine Grabar_temp_L5(1, 1, "Hora apag: ", "DEF");
+LiquidLine Grabar_temp_L2(1, 1, "Modo:          ", grabar_temp_modo_text);
+LiquidLine Grabar_temp_L3(1, 2, "Manual:        ", grabar_temp_manual_text);
+LiquidLine Grabar_temp_L4(1, 3, "Hora enc:   ", grabar_temp_hora_enc[0], ":", grabar_temp_hora_enc[1]);
+LiquidLine Grabar_temp_L5(1, 4, "Hora apag:  ", grabar_temp_hora_apag[0], ":", grabar_temp_hora_apag[1]);
 
 //pantallaGrabar_temp_modo
 LiquidLine Grabar_temp_modo_L1(1, 0, "Modo:");
@@ -198,18 +202,18 @@ LiquidLine Grabar_temp_manual_L2(1, 1, grabar_temp_manual_text);
 
 //pantallaGrabar_temp_horaenc
 LiquidLine Grabar_temp_horaenc_L1(1, 0, "hora encender:");
-LiquidLine Grabar_temp_horaenc_L2(1, 1, "00:00");
+LiquidLine Grabar_temp_horaenc_L2(1, 1, grabar_temp_hora_enc[0], ":", grabar_temp_hora_enc[1]);
 
 //pantallaGrabar_temp_horaapg
 LiquidLine Grabar_temp_horaapg_L1(1, 0, "hora apagar:");
-LiquidLine Grabar_temp_horaapg_L2(1, 1, "00:00");
+LiquidLine Grabar_temp_horaapg_L2(1, 1, grabar_temp_hora_apag[0], ":", grabar_temp_hora_apag[1]);
 
 //menuGrabar_hum
 LiquidLine Grabar_hum_L1(1, 0, "Menu Grabar");
 LiquidLine Grabar_hum_L2(1, 1, "Modo: ", grabar_hum_modo_text);
-LiquidLine Grabar_hum_L3(1, 1, "Manual: ", grabar_hum_manual_text);
-LiquidLine Grabar_hum_L4(1, 1, "Hora enc: ", "DEF");
-LiquidLine Grabar_hum_L5(1, 1, "Hora apag: ", "DEF");
+LiquidLine Grabar_hum_L3(1, 2, "Manual: ", grabar_hum_manual_text);
+LiquidLine Grabar_hum_L4(1, 3, "Hora enc: ", grabar_hum_hora_enc[0], ":", grabar_hum_hora_enc[1]);
+LiquidLine Grabar_hum_L5(1, 4, "Hora apag: ", grabar_hum_hora_apag[0], ":", grabar_hum_hora_apag[1]);
 
 //pantallaGrabar_hum_modo
 LiquidLine Grabar_hum_modo_L1(1, 0, "Modo:");
@@ -221,18 +225,18 @@ LiquidLine Grabar_hum_manual_L2(1, 1, grabar_hum_manual_text);
 
 //pantallaGrabar_hum_horaenc
 LiquidLine Grabar_hum_horaenc_L1(1, 0, "hora encender:");
-LiquidLine Grabar_hum_horaenc_L2(1, 1, "00:00");
+LiquidLine Grabar_hum_horaenc_L2(1, 1, grabar_hum_hora_enc[0], ":", grabar_hum_hora_enc[1]);
 
 //pantallaGrabar_hum_horaapg
 LiquidLine Grabar_hum_horaapg_L1(1, 0, "hora apagar:");
-LiquidLine Grabar_hum_horaapg_L2(1, 1, "00:00");
+LiquidLine Grabar_hum_horaapg_L2(1, 1, grabar_hum_hora_apag[0], ":", grabar_hum_hora_apag[1]);
 
 //menuGrabar_hum
 LiquidLine Grabar_luz_L1(1, 0, "Menu Grabar");
 LiquidLine Grabar_luz_L2(1, 1, "Modo: ", grabar_luz_modo_text);
-LiquidLine Grabar_luz_L3(1, 1, "Manual: ", grabar_luz_manual_text);
-LiquidLine Grabar_luz_L4(1, 1, "Hora enc: ", "DEF");
-LiquidLine Grabar_luz_L5(1, 1, "Hora apag: ", "DEF");
+LiquidLine Grabar_luz_L3(1, 2, "Manual: ", grabar_luz_manual_text);
+LiquidLine Grabar_luz_L4(1, 3, "Hora enc: ", grabar_luz_hora_enc[0], ":", grabar_luz_hora_enc[1]);
+LiquidLine Grabar_luz_L5(1, 4, "Hora apag: ", grabar_luz_hora_apag[0], ":", grabar_luz_hora_apag[1]);
 
 //pantallaGrabar_luz_modo
 LiquidLine Grabar_luz_modo_L1(1, 0, "Modo:");
@@ -244,11 +248,11 @@ LiquidLine Grabar_luz_manual_L2(1, 1, grabar_luz_manual_text);
 
 //pantallaGrabar_luz_horaenc
 LiquidLine Grabar_luz_horaenc_L1(1, 0, "hora encender:");
-LiquidLine Grabar_luz_horaenc_L2(1, 1, "00:00");
+LiquidLine Grabar_luz_horaenc_L2(1, 1, grabar_luz_hora_enc[0], ":", grabar_luz_hora_enc[1]);
 
 //pantallaGrabar_luz_horaapg
 LiquidLine Grabar_luz_horaapg_L1(1, 0, "hora apagar:");
-LiquidLine Grabar_luz_horaapg_L2(1, 1, "00:00");
+LiquidLine Grabar_luz_horaapg_L2(1, 1, grabar_luz_hora_apag[0], ":", grabar_luz_hora_apag[1]);
 
 LiquidMenu menuInvernadero (lcd, pantallaMenuPrincipal);
 
@@ -293,8 +297,9 @@ void blankFunction()
 
 void pantalla_anterior()
 {
+    lcd.clear();
     menuInvernadero.previous_screen2();
-    menuInvernadero.set_focusedLine(fcline_menuAnterior);
+    // menuInvernadero.set_focusedLine(fcline_menuAnterior);
     delay(50);
 }
 
@@ -312,15 +317,17 @@ bool Sht31_update(){
 
 void fn_principal()
 {
+  lcd.clear();
   // State_encoder = enc_scrolling;
   menuInvernadero.change_screen2(P_MenuPrincipal);
-  menuInvernadero.set_focusedLine(fcline_menuAnterior);
+  //menuInvernadero.set_focusedLine(fcline_menuAnterior);
 }
 
 void fn_monitorizar()
 {
+  lcd.clear();
   // State_encoder = enc_scrolling;
-  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   Sht31_update();
   if (temp_estado_ctrl)
     strncpy(temp_estado_ctrl_text, string_on, sizeof(string_on));
@@ -331,37 +338,41 @@ void fn_monitorizar()
 
 void fn_ctrlTemp()
 {
+  lcd.clear();
   // State_encoder = enc_scrolling;
-  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   if (temp_estado_ctrl)
     strncpy(temp_estado_ctrl_text, string_on, sizeof(string_on));
   else
     strncpy(temp_estado_ctrl_text, string_off, sizeof(string_off));
   menuInvernadero.change_screen2(P_CtrlTemperatura);
-  menuInvernadero.set_focusedLine(0);
+  //menuInvernadero.set_focusedLine(0);
 }
 
 void fn_ctrlTemp_Status()
 {
+  lcd.clear();
   // State_encoder = enc_switch;
-  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_CtrlTemperatura_ctrlStatus);
-  menuInvernadero.set_focusedLine(0);
+  //menuInvernadero.set_focusedLine(0);
 }
 
 void fn_ctrlTemp_Temp()
 {
+  lcd.clear();
   // State_encoder = enc_poll;
   encoder.setPosition(temp_ctrl);
-  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_CtrlTemperatura_ctrlTemp);
-  menuInvernadero.set_focusedLine(0);
+  //menuInvernadero.set_focusedLine(0);
 }
 
 void fn_ctrlLuz()
 {
+  lcd.clear();
   // State_encoder = enc_scrolling;
-  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   if (luz_modo)
     strncpy(luz_modo_text, string_auto, sizeof(string_auto));
   else
@@ -371,28 +382,32 @@ void fn_ctrlLuz()
   else
     strncpy(luz_manual_text, string_off, sizeof(string_off));
   menuInvernadero.change_screen2(P_CtrlLuz);
-  menuInvernadero.set_focusedLine(0);
+  //menuInvernadero.set_focusedLine(0);
 }
 
 void fn_ctroLuz_modo(){
+  lcd.clear();
   // State_encoder = enc_switch;
-  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_CtrlLuz_modo);
-  menuInvernadero.set_focusedLine(0);
+  //menuInvernadero.set_focusedLine(0);
 }
 
 void fn_ctroLuz_manual(){
-  // State_encoder = enc_switch;
-  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  //State_encoder = enc_switch;
+  lcd.clear(); 
+  // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_CtrlLuz_manual);
-  menuInvernadero.set_focusedLine(0);
+  //menuInvernadero.set_focusedLine(0);
 }
 
 void fn_ctroLuz_horaenc(){
   // State_encoder = enc_poll;
-  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  lcd.clear(); 
+  encoder.setPosition(luz_hora_enc[0]);
+  // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_CtrlLuz_horaLuz_enc);
-  menuInvernadero.set_focusedLine(0);
+  //menuInvernadero.set_focusedLine(0);
 
   //LiquidScreen *test = menuInvernadero.get_currentScreen()
   
@@ -407,23 +422,27 @@ void fn_ctroLuz_horaenc(){
 
 void fn_ctroLuz_horaapg(){
   // State_encoder = enc_poll;
-  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  lcd.clear(); 
+  encoder.setPosition(luz_hora_apag[0]);
+  // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_CtrlLuz_horaLuz_apag);
-  menuInvernadero.set_focusedLine(0);
+  //menuInvernadero.set_focusedLine(0);
 }
 
 void fn_grabar()
 {
+  lcd.clear();
   // State_encoder = enc_scrolling;
-  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  // // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_Grabar);
-  menuInvernadero.set_focusedLine(0);
+  //menuInvernadero.set_focusedLine(0);
 }
 
 void fn_grabar_temp()
 {
+  lcd.clear();
   // State_encoder = enc_scrolling;
-  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   if (grabar_temp_modo)
     strncpy(grabar_temp_modo_text, string_auto, sizeof(string_auto));
   else
@@ -433,45 +452,52 @@ void fn_grabar_temp()
   else
     strncpy(grabar_temp_manual_text, string_off, sizeof(string_off));
   menuInvernadero.change_screen2(P_Grabar_temp);
-  menuInvernadero.set_focusedLine(0);
+  //menuInvernadero.set_focusedLine(0);
 }
 
 void fn_grabar_temp_modo()
 {
+  lcd.clear();
   // State_encoder = enc_switch;
-  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_Grabar_temp_modo);
-  menuInvernadero.set_focusedLine(0);
+  //menuInvernadero.set_focusedLine(0);
 }
 
 void fn_grabar_temp_manual()
 {
+  lcd.clear();
   // State_encoder = enc_switch;
-  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_Grabar_temp_manual);
-  menuInvernadero.set_focusedLine(0);
+  //menuInvernadero.set_focusedLine(0);
 }
 
 void fn_grabar_temp_horaenc()
 {
+  lcd.clear();
+  encoder.setPosition(grabar_temp_hora_enc[0]);
   // State_encoder = enc_poll;
-  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_Grabar_temp_horaenc);
-  menuInvernadero.set_focusedLine(0);
+  //menuInvernadero.set_focusedLine(0);
 }
 
 void fn_grabar_temp_horaapg()
 {
+  lcd.clear();
+  encoder.setPosition(grabar_temp_hora_apag[0]);
   // State_encoder = enc_poll;
-  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_Grabar_temp_horaapg);
-  menuInvernadero.set_focusedLine(0);
+  //menuInvernadero.set_focusedLine(0);
 }
 
 void fn_grabar_hum()
 {
+  lcd.clear();
   // State_encoder = enc_scrolling;
-  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   if (grabar_hum_modo)
     strncpy(grabar_hum_modo_text, string_auto, sizeof(string_auto));
   else
@@ -481,45 +507,52 @@ void fn_grabar_hum()
   else
     strncpy(grabar_hum_manual_text, string_off, sizeof(string_off));
   menuInvernadero.change_screen2(P_Grabar_hum);
-  menuInvernadero.set_focusedLine(0);
+  //menuInvernadero.set_focusedLine(0);
 }
 
 void fn_grabar_hum_modo()
 {
+  lcd.clear();
   // State_encoder = enc_switch;
-  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_Grabar_hum_modo);
-  menuInvernadero.set_focusedLine(0);
+  //menuInvernadero.set_focusedLine(0);
 }
 
 void fn_grabar_hum_manual()
 {
+  lcd.clear();
   // State_encoder = enc_switch;
-  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_Grabar_hum_manual);
-  menuInvernadero.set_focusedLine(0);
+  //menuInvernadero.set_focusedLine(0);
 }
 
 void fn_grabar_hum_horaenc()
 {
+  lcd.clear();
+  encoder.setPosition(grabar_hum_hora_enc[0]);
   // State_encoder = enc_poll;
-  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_Grabar_hum_horaenc);
-  menuInvernadero.set_focusedLine(0);
+  //menuInvernadero.set_focusedLine(0);
 }
 
 void fn_grabar_hum_horaapg()
 {
+  lcd.clear();
+  encoder.setPosition(grabar_hum_hora_apag[0]);
   // State_encoder = enc_poll;
-  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_Grabar_hum_horaapg);
-  menuInvernadero.set_focusedLine(0);
+  //menuInvernadero.set_focusedLine(0);
 }
 
 void fn_grabar_luz()
 {
+  lcd.clear();
   // State_encoder = enc_scrolling;
-  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   if (grabar_luz_modo)
     strncpy(grabar_luz_modo_text, string_auto, sizeof(string_auto));
   else
@@ -529,39 +562,45 @@ void fn_grabar_luz()
   else
     strncpy(grabar_luz_manual_text, string_off, sizeof(string_off));
   menuInvernadero.change_screen2(P_Grabar_luz);
-  menuInvernadero.set_focusedLine(0);
+  //menuInvernadero.set_focusedLine(0);
 }
 
 void fn_grabar_luz_modo()
 {
+  lcd.clear();
   // State_encoder = enc_switch;
-  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_Grabar_luz_modo);
-  menuInvernadero.set_focusedLine(0);
+  //menuInvernadero.set_focusedLine(0);
 }
 
 void fn_grabar_luz_manual()
 {
+  lcd.clear();
   // State_encoder = enc_switch;
-  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_Grabar_luz_manual);
-  menuInvernadero.set_focusedLine(0);
+  //menuInvernadero.set_focusedLine(0);
 }
 
 void fn_grabar_luz_horaenc()
 {
+  lcd.clear();
+  encoder.setPosition(grabar_luz_hora_enc[0]);
   // State_encoder = enc_poll;
-  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_Grabar_luz_horaenc);
-  menuInvernadero.set_focusedLine(0);
+  //menuInvernadero.set_focusedLine(0);
 }
 
 void fn_grabar_luz_horaapg()
 {
+  lcd.clear();
+  encoder.setPosition(grabar_luz_hora_apag[0]);
   // State_encoder = enc_poll;
-  fcline_menuAnterior = menuInvernadero.get_focusedLine();
+  // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_Grabar_luz_horaapg);
-  menuInvernadero.set_focusedLine(0);
+  //menuInvernadero.set_focusedLine(0);
 }
 
 void selectOption(){
@@ -570,9 +609,112 @@ void selectOption(){
     while (digitalRead(encoderBotonPin)==LOW);
     delay(10);
 
-    if (menuInvernadero.is_callable(1))
+    if (menuInvernadero.is_callable(1)){
       menuInvernadero.call_function(1);
-    else
+      if(menuInvernadero.get_currentScreen()->get_encoder_interaction()==LiquidScreen::enc_time){
+        int curr_NumScreen = menuInvernadero.get_currentNumScreen() + 1;
+        int lcd_pos = 1;
+        lcd_pos_hora = 1;
+        switch (curr_NumScreen)
+        {
+          case P_CtrlLuz_horaLuz_enc:
+            if(luz_hora_enc[time_select]>9)      
+              lcd_pos = 2;
+            break;
+          case P_CtrlLuz_horaLuz_apag:
+            if(luz_hora_apag[time_select]>9)
+              lcd_pos = 2;
+            break;
+          case P_Grabar_temp_horaenc:
+            if(grabar_temp_hora_enc[time_select]>9)
+              lcd_pos=2;
+            break;
+          case P_Grabar_temp_horaapg:
+            if(grabar_temp_hora_apag[time_select] >9)
+            lcd_pos=2;
+            break;
+          case P_Grabar_hum_horaenc:
+            if(grabar_hum_hora_enc[time_select] >9)
+            lcd_pos=2;
+            break;
+          case P_Grabar_hum_horaapg:
+            if(grabar_hum_hora_apag[time_select] >9)
+            lcd_pos=2;
+            break;
+          case P_Grabar_luz_horaenc:
+            if(grabar_luz_hora_enc[time_select] >9)
+            lcd_pos=2;
+            break;
+          case P_Grabar_luz_horaapg:
+            if(grabar_luz_hora_apag[time_select] >9)
+            lcd_pos=2;
+            break;
+        default:
+          break;
+        }
+        lcd_pos_hora = lcd_pos;
+        lcd.setCursor(lcd_pos,1);
+        lcd.blink();
+      }
+    }else if(menuInvernadero.get_currentScreen()->get_encoder_interaction()==LiquidScreen::enc_time){
+      if(time_select > 0){
+        time_select = 0;
+        lcd.noBlink();
+        pantalla_anterior();
+      }else{
+        time_select++;
+
+        int curr_NumScreen = menuInvernadero.get_currentNumScreen() + 1;
+        int lcd_pos = 1;
+        switch (curr_NumScreen)
+        {
+          case P_CtrlLuz_horaLuz_enc:
+            if(luz_hora_enc[time_select]>9)      
+              lcd_pos = 2;
+            encoder.setPosition(luz_hora_enc[time_select]);
+            break;
+          case P_CtrlLuz_horaLuz_apag:
+            if(luz_hora_apag[time_select]>9)
+              lcd_pos = 2;
+            encoder.setPosition(luz_hora_apag[time_select]);
+            break;
+          case P_Grabar_temp_horaenc:
+            if(grabar_temp_hora_enc[time_select]>9)
+              lcd_pos=2;
+            encoder.setPosition(grabar_temp_hora_enc[time_select]);
+            break;
+          case P_Grabar_temp_horaapg:
+            if(grabar_temp_hora_apag[time_select] >9)
+            lcd_pos=2;
+            encoder.setPosition(grabar_temp_hora_apag[time_select]);
+            break;
+          case P_Grabar_hum_horaenc:
+            if(grabar_hum_hora_enc[time_select] >9)
+            lcd_pos=2;
+            encoder.setPosition(grabar_hum_hora_enc[time_select]);
+            break;
+          case P_Grabar_hum_horaapg:
+            if(grabar_hum_hora_apag[time_select] >9)
+            lcd_pos=2;
+            encoder.setPosition(grabar_hum_hora_apag[time_select]);
+            break;
+          case P_Grabar_luz_horaenc:
+            if(grabar_luz_hora_enc[time_select] >9)
+            lcd_pos=2;
+            encoder.setPosition(grabar_luz_hora_enc[time_select]);
+            break;
+          case P_Grabar_luz_horaapg:
+            if(grabar_luz_hora_apag[time_select] >9)
+            lcd_pos=2;
+            encoder.setPosition(grabar_luz_hora_apag[time_select]);
+            break;
+        default:
+          break;
+        }
+        lcd.setCursor(lcd_pos_hora + 1 + lcd_pos,1);
+        lcd.blink();
+      }
+    }else
       pantalla_anterior();
   }
 }
@@ -606,7 +748,7 @@ void switch_encoder(bool state_sw){
     if(state_sw)
       strncpy(grabar_temp_modo_text, string_auto, sizeof(string_auto));
     else
-      strncpy(grabar_temp_manual_text, string_man, sizeof(string_man));
+      strncpy(grabar_temp_modo_text, string_man, sizeof(string_man));
     break;
   case P_Grabar_temp_manual:
     grabar_temp_manual = state_sw;
@@ -620,7 +762,7 @@ void switch_encoder(bool state_sw){
     if(state_sw)
       strncpy(grabar_hum_modo_text, string_auto, sizeof(string_auto));
     else
-      strncpy(grabar_hum_manual_text, string_man, sizeof(string_man));
+      strncpy(grabar_hum_modo_text, string_man, sizeof(string_man));
     break;
   case P_Grabar_hum_manual:
     grabar_hum_manual = state_sw;
@@ -634,7 +776,7 @@ void switch_encoder(bool state_sw){
     if(state_sw)
       strncpy(grabar_luz_modo_text, string_auto, sizeof(string_auto));
     else
-      strncpy(grabar_luz_manual_text, string_man, sizeof(string_man));
+      strncpy(grabar_luz_modo_text, string_man, sizeof(string_man));
     break;
   case P_Grabar_luz_manual:
     grabar_luz_manual = state_sw;
@@ -649,31 +791,81 @@ void switch_encoder(bool state_sw){
 }
 
 void poll_encoder(int posEnc){
-  switch (menuInvernadero.get_currentNumScreen() + 1)
-  {
-  case P_CtrlTemperatura_ctrlTemp:
-    {if (posEnc > 50) {
-            encoder.setPosition(50);
-            posEnc = ROTARYMAX;
-          } // if
-    temp_ctrl = posEnc;
+  int curr_NumScreen = menuInvernadero.get_currentNumScreen() + 1;
+  if(curr_NumScreen == P_CtrlTemperatura_ctrlTemp){
+   if (posEnc > 50) {
+      encoder.setPosition(50);
+      posEnc = 50;
+    } // if
+    temp_ctrl = posEnc; 
+  }else{
+    if (time_select == 0){
+      if (posEnc < 0 ){
+        encoder.setPosition(23);
+          posEnc = 23;
+      }
+      if (posEnc > 23) {
+          encoder.setPosition(0);
+          posEnc = 0;
+      } // if
+    }else if (time_select == 1){
+      if (posEnc < 0 ){
+        encoder.setPosition(59);
+          posEnc = 59;
+      }
+      if (posEnc > 59) {
+          encoder.setPosition(0);
+          posEnc = 0;
+      } // if
     }
-    break;
-  case P_CtrlLuz_horaLuz_enc:
-   
-    break;
-  case P_CtrlLuz_horaLuz_apag:
-   
-    break;
-  case P_Grabar_temp_horaenc:
-   
-    break;
-  default:
-    break;
+    // lcd.setCursor(2 + time_select * 3, 1);
+    switch (curr_NumScreen)
+    {
+      case P_CtrlLuz_horaLuz_enc:      
+        luz_hora_enc[time_select] = posEnc;
+        break;
+      case P_CtrlLuz_horaLuz_apag:
+        luz_hora_apag[time_select] = posEnc;
+        break;
+      case P_Grabar_temp_horaenc:
+        grabar_temp_hora_enc[time_select] = posEnc;
+        break;
+      case P_Grabar_temp_horaapg:
+        grabar_temp_hora_apag[time_select] = posEnc;
+        break;
+      case P_Grabar_hum_horaenc:
+        grabar_hum_hora_enc[time_select] = posEnc;
+        break;
+      case P_Grabar_hum_horaapg:
+        grabar_hum_hora_apag[time_select] = posEnc;
+        break;
+      case P_Grabar_luz_horaenc:
+        grabar_luz_hora_enc[time_select] = posEnc;
+        break;
+      case P_Grabar_luz_horaapg:
+        grabar_luz_hora_apag[time_select] = posEnc;
+        break;
+    default:
+      break;
+    }
+
+    menuInvernadero.update();
+    
+    if(posEnc>9){
+      if (time_select==0)
+        lcd_pos_hora=2;
+      lcd.setCursor(lcd_pos_hora+time_select*3,1);
+      lcd.blink();
+    }else{
+      if (time_select==0)
+        lcd_pos_hora=1;
+      lcd.setCursor(lcd_pos_hora+time_select*2,1);
+      lcd.blink();
+    }
   }
 }
 
-void pollRotator(){
+void encoderRotating(){
   // funcion para scrolling
   static int pos = 0;
   encoder.tick();
@@ -712,6 +904,22 @@ void pollRotator(){
         }
         poll_encoder(newPos);
         menuInvernadero.update();
+        delay(50);
+      }
+      break;
+    case LiquidScreen::enc_time:
+      { 
+        int newPos = encoder.getPosition();
+        poll_encoder(newPos);
+        
+        // if (time_select == 0){
+        //   lcd.setCursor(2,1);
+        //   lcd.blink();
+        // }
+        // else if (time_select == 1){
+        //   lcd.setCursor(5,1);
+        //   lcd.blink();
+        // }
         delay(50);
       }
     break;
@@ -782,54 +990,56 @@ void setup() {
   lcd.init();
   lcd.init();
   lcd.setBacklight(1);
-  lcd.setCursor(0, 0);
-  lcd.print(" Universidad del");
   lcd.setCursor(0, 1);
-  lcd.print("    Pacifico");
+  lcd.print("   Universidad del");
+  lcd.setCursor(0, 2);
+  lcd.print("      Pacifico");
   delay(tim_inf);
   lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("  Invernadero");
   lcd.setCursor(0, 1);
-  lcd.print("     v0.1");
+  lcd.print("    Invernadero");
+  lcd.setCursor(0, 2);
+  lcd.print("       v0.1");
   delay(tim_inf);
   lcd.clear();
 
     // ------ Iniciar Reloj
-  lcd.setCursor(0, 0);
-  lcd.print("Reloj: ");
   lcd.setCursor(0, 1);
+  lcd.print("       Reloj: ");
+  lcd.setCursor(0, 2);
   if (!rtc.begin()) 
-    lcd.print("Error. No iniciado");
+    lcd.print(" Error. No iniciado");
   else
-    lcd.print("Conectado");
+    lcd.print("     Conectado");
   delay(tim_inf);
   lcd.clear();
 
    // ------ Iniciar sht
-  lcd.setCursor(0, 0);
-  lcd.print("Sht31: ");
   lcd.setCursor(0, 1);
+  lcd.print("       Sht31: ");
+  lcd.setCursor(0, 2);
   if (!sht31.begin(0x44)) 
-    lcd.print("No conectado");
+    lcd.print("   No conectado");
   else
-    lcd.print("Conectado");
+    lcd.print("     Conectado");
   delay(tim_inf);
   lcd.clear();
 
   // ------ Iniciar SD
-  lcd.setCursor(0, 0);
-  lcd.print("SD: ");
   lcd.setCursor(0, 1);
-  delay(1500);
+  lcd.print("        SD: ");
+  lcd.setCursor(0, 2);
+  delay(2000);
   if (!SD.begin(chipSelect)) 
-    lcd.print("No conectado");
+    lcd.print("    No conectado");
   else
-    lcd.print("Conectado");
+    lcd.print("     Conectado");
   delay(tim_inf);
   lcd.clear();
 
      // ------ Iniciar menus/submenus
+
+  #define displayLineCount 4
   //menuPrincipal
   pantallaMenuPrincipal.add_line(Prin_L1);
   pantallaMenuPrincipal.add_line(Prin_L2);
@@ -842,8 +1052,9 @@ void setup() {
   Prin_L4.attach_function(1, fn_grabar);
 
   pantallaMenuPrincipal.set_focusPosition(Position::LEFT);
-  pantallaMenuPrincipal.set_displayLineCount(2);
+  pantallaMenuPrincipal.set_displayLineCount(displayLineCount);
   pantallaMenuPrincipal.set_encoder_interaction(LiquidScreen::enc_scrolling);
+  pantallaMenuPrincipal.set_focusedLine(0);
 
   //menuMonitorizar
   pantallaMenuMonitorizar.add_line(Mon_L1_1);
@@ -851,8 +1062,9 @@ void setup() {
   pantallaMenuMonitorizar.add_line(Mon_L1_3);
   pantallaMenuMonitorizar.add_line(Mon_L1_4);
   pantallaMenuMonitorizar.add_line(Mon_L2_1);
-
+  
   menuInvernadero.add_screen(pantallaMenuMonitorizar);
+  
 
   //menuCtrlTemperatura
   pantallaCtrlTemperatura.add_line(CtrlTemp_L1);
@@ -864,8 +1076,9 @@ void setup() {
   CtrlTemp_L3.attach_function(1, fn_ctrlTemp_Temp);
 
   pantallaCtrlTemperatura.set_focusPosition(Position::LEFT);
-  pantallaCtrlTemperatura.set_displayLineCount(2);
+  pantallaCtrlTemperatura.set_displayLineCount(displayLineCount);
   pantallaCtrlTemperatura.set_encoder_interaction(LiquidScreen::enc_scrolling);
+  pantallaCtrlTemperatura.set_focusedLine(0);
   menuInvernadero.add_screen(pantallaCtrlTemperatura);
 
   // menuCtrlTemperatura_ctrlStatus
@@ -894,8 +1107,9 @@ void setup() {
   CtrlLuz_L5.attach_function(1, fn_ctroLuz_horaapg);
 
   pantallaCtrlLuz.set_focusPosition(Position::LEFT);
-  pantallaCtrlLuz.set_displayLineCount(2);
+  pantallaCtrlLuz.set_displayLineCount(displayLineCount);
   pantallaCtrlLuz.set_encoder_interaction(LiquidScreen::enc_scrolling);
+  pantallaCtrlLuz.set_focusedLine(0);
   menuInvernadero.add_screen(pantallaCtrlLuz); 
 
   // pantallaCtrlLuz_Modo
@@ -913,13 +1127,13 @@ void setup() {
   //pantallaCtrlLuz_horaenc
   pantallaCtrlLuz_horaLuz_enc.add_line(CtrlLuz_horaenc_L1);
   pantallaCtrlLuz_horaLuz_enc.add_line(CtrlLuz_horaenc_L2);
-  pantallaCtrlLuz_horaLuz_enc.set_encoder_interaction(LiquidScreen::enc_polling);
+  pantallaCtrlLuz_horaLuz_enc.set_encoder_interaction(LiquidScreen::enc_time);
   menuInvernadero.add_screen(pantallaCtrlLuz_horaLuz_enc); 
 
   //pantallaCtrlLuz_horaapg
   pantallaCtrlLuz_horaLuz_apag.add_line(CtrlLuz_horaapg_L1);
   pantallaCtrlLuz_horaLuz_apag.add_line(CtrlLuz_horaapg_L2);
-  pantallaCtrlLuz_horaLuz_apag.set_encoder_interaction(LiquidScreen::enc_polling);
+  pantallaCtrlLuz_horaLuz_apag.set_encoder_interaction(LiquidScreen::enc_time);
   menuInvernadero.add_screen(pantallaCtrlLuz_horaLuz_apag); 
 
   //menuGrabar
@@ -934,8 +1148,9 @@ void setup() {
   Grabar_L4.attach_function(1, fn_grabar_luz);
 
   pantallaGrabar.set_focusPosition(Position::LEFT);
-  pantallaGrabar.set_displayLineCount(2);
+  pantallaGrabar.set_displayLineCount(displayLineCount);
   pantallaGrabar.set_encoder_interaction(LiquidScreen::enc_scrolling);
+  pantallaGrabar.set_focusedLine(0);
   menuInvernadero.add_screen(pantallaGrabar); 
 
   //menuGrabar_temp
@@ -952,8 +1167,9 @@ void setup() {
   Grabar_temp_L5.attach_function(1, fn_grabar_temp_horaapg);
 
   pantallaGrabar_temp.set_focusPosition(Position::LEFT);
-  pantallaGrabar_temp.set_displayLineCount(2);
+  pantallaGrabar_temp.set_displayLineCount(displayLineCount);
   pantallaGrabar_temp.set_encoder_interaction(LiquidScreen::enc_scrolling);
+  pantallaGrabar_temp.set_focusedLine(0);
   menuInvernadero.add_screen(pantallaGrabar_temp);
 
   //pantallaGrabar_temp_modo
@@ -971,13 +1187,13 @@ void setup() {
   //pantallaGrabar_temp_horaenc
   pantallaGrabar_temp_horaenc.add_line(Grabar_temp_horaenc_L1);
   pantallaGrabar_temp_horaenc.add_line(Grabar_temp_horaenc_L2);
-  pantallaGrabar_temp_horaenc.set_encoder_interaction(LiquidScreen::enc_polling);
+  pantallaGrabar_temp_horaenc.set_encoder_interaction(LiquidScreen::enc_time);
   menuInvernadero.add_screen(pantallaGrabar_temp_horaenc); 
 
   //pantallaGrabar_temp_horaapg
   pantallaGrabar_temp_horaapg.add_line(Grabar_temp_horaapg_L1);
   pantallaGrabar_temp_horaapg.add_line(Grabar_temp_horaapg_L2);
-  pantallaGrabar_temp_horaapg.set_encoder_interaction(LiquidScreen::enc_polling);
+  pantallaGrabar_temp_horaapg.set_encoder_interaction(LiquidScreen::enc_time);
   menuInvernadero.add_screen(pantallaGrabar_temp_horaapg); 
 
   //menuGrabar_hum
@@ -994,8 +1210,9 @@ void setup() {
   Grabar_hum_L5.attach_function(1, fn_grabar_hum_horaapg);
 
   pantallaGrabar_hum.set_focusPosition(Position::LEFT);
-  pantallaGrabar_hum.set_displayLineCount(2);
+  pantallaGrabar_hum.set_displayLineCount(displayLineCount);
   pantallaGrabar_hum.set_encoder_interaction(LiquidScreen::enc_scrolling);
+  pantallaGrabar_hum.set_focusedLine(0);
   menuInvernadero.add_screen(pantallaGrabar_hum); 
 
   //pantallaGrabar_hum_modo
@@ -1013,13 +1230,13 @@ void setup() {
   //pantallaGrabar_hum_horaenc
   pantallaGrabar_hum_horaenc.add_line(Grabar_hum_horaenc_L1);
   pantallaGrabar_hum_horaenc.add_line(Grabar_hum_horaenc_L2);
-  pantallaGrabar_hum_horaenc.set_encoder_interaction(LiquidScreen::enc_polling);
+  pantallaGrabar_hum_horaenc.set_encoder_interaction(LiquidScreen::enc_time);
   menuInvernadero.add_screen(pantallaGrabar_hum_horaenc);
 
   //pantallaGrabar_hum_horaapg
   pantallaGrabar_hum_horaapg.add_line(Grabar_hum_horaapg_L1);
   pantallaGrabar_hum_horaapg.add_line(Grabar_hum_horaapg_L2);
-  pantallaGrabar_hum_horaapg.set_encoder_interaction(LiquidScreen::enc_polling);
+  pantallaGrabar_hum_horaapg.set_encoder_interaction(LiquidScreen::enc_time);
   menuInvernadero.add_screen(pantallaGrabar_hum_horaapg);
 
   //menuGrabar_luz
@@ -1036,8 +1253,9 @@ void setup() {
   Grabar_luz_L5.attach_function(1, fn_grabar_luz_horaapg);
 
   pantallaGrabar_luz.set_focusPosition(Position::LEFT);
-  pantallaGrabar_luz.set_displayLineCount(2);
+  pantallaGrabar_luz.set_displayLineCount(displayLineCount);
   pantallaGrabar_luz.set_encoder_interaction(LiquidScreen::enc_scrolling);
+  pantallaGrabar_luz.set_focusedLine(0);
   menuInvernadero.add_screen(pantallaGrabar_luz); 
 
   //pantallaGrabar_luz_modo
@@ -1055,13 +1273,13 @@ void setup() {
   //pantallaGrabar_luz_horaenc
   pantallaGrabar_luz_horaenc.add_line(Grabar_luz_horaenc_L1);
   pantallaGrabar_luz_horaenc.add_line(Grabar_luz_horaenc_L2);
-  pantallaGrabar_luz_horaenc.set_encoder_interaction(LiquidScreen::enc_polling);
+  pantallaGrabar_luz_horaenc.set_encoder_interaction(LiquidScreen::enc_time);
   menuInvernadero.add_screen(pantallaGrabar_luz_horaenc);
 
   //pantallaGrabar_luz_horaapg
   pantallaGrabar_luz_horaapg.add_line(Grabar_luz_horaapg_L1);
   pantallaGrabar_luz_horaapg.add_line(Grabar_luz_horaapg_L2);
-  pantallaGrabar_luz_horaapg.set_encoder_interaction(LiquidScreen::enc_polling);
+  pantallaGrabar_luz_horaapg.set_encoder_interaction(LiquidScreen::enc_time);
   menuInvernadero.add_screen(pantallaGrabar_luz_horaapg);
 
   //sistema de menus
@@ -1074,7 +1292,7 @@ void setup() {
 void loop() {
 
   selectOption();
-  pollRotator();
+  encoderRotating();
 
   int C_screen = menuInvernadero.get_currentNumScreen();
 
