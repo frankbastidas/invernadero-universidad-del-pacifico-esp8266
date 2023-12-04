@@ -1,2 +1,5 @@
-Wire
 SPI
+adafruit/RTClib@^2.1.3
+Wire
+adafruit/Adafruit SHT31 Library@^2.2.2
+mathertel/RotaryEncoder@^1.5.3
