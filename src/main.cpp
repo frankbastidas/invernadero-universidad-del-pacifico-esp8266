@@ -798,33 +798,51 @@ int getVal_time(int _time){
         return val_time;
 }
 
-void getTimeRTC(){
-  lcd.clear();
-  DateTime now = rtc.now();
-  lcd.setCursor(0, 2);
-  lcd.print(now.hour(), DEC);
-  lcd.print(':');
-  lcd.print(now.minute(), DEC);
-  lcd.print(':');
-  lcd.print(now.second(), DEC);
+bool getTimeRTC(uint8_t &_hora, uint8_t &_min, uint8_t &_seg){
 
-  delay(1000);
+  DateTime now = rtc.now();
+  if(!rtc.isrunning()){
+    Serial.println("RTC No conectado");
+    return false;
+  }
+  Serial.println("RTC conectado");
+
+  _hora = now.hour();
+  _min = now.minute();
+  _seg = now.second();
+
+  return true;
 }
 
-void sd_appendFile(fs::FS &fs, const char * path, const char * message){
-    Serial.printf("Appending to file: %s\n", path);
+bool sd_appendFile(fs::FS &fs, String path, String message){
+  Serial.printf("Appending to file: %s\n", path);
 
-    File file = fs.open(path, FILE_APPEND);
-    if(!file){
-        Serial.println("Failed to open file for appending");
-        return;
-    }
+  if(!sd_isconnected || (SD.cardType()==CARD_NONE)){
+    sd_isconnected = false;
+    return false;
+  }
+  static File file = fs.open(path, FILE_APPEND);
+  if(!file){
+      Serial.println("error Sd");
+      lcd.clear();
+      lcd.setCursor(1,1);
+      lcd.print("  SD: ERROR");
+      lcd.setCursor(1,2);
+      lcd.print(" Escribiendo");
+      delay(2000);
+      sd_isconnected = false;
+      fn_principal();
+      // SD.end();
+      return false;
+  }
+
     if(file.print(message)){
         Serial.println("Message appended");
     } else {
         Serial.println("Append failed");
     }
     file.close();
+    return true;
 }
 
 bool sd_writeFile(fs::FS &fs, String path, String message){
@@ -1605,7 +1623,7 @@ void loop() {
   selectOption();
   encoderRotating();
 
-  int C_screen = menuInvernadero.get_currentNumScreen();
+  static int C_screen = menuInvernadero.get_currentNumScreen();
 
   if(C_screen == 1){ // screen Monitorizar
     if(Sht31_update()) // si cambia valores de temp o hum, actualizar pantalla
@@ -1613,34 +1631,44 @@ void loop() {
     
     if(grabar_temp_modo == false){ //true-modo Automatic, false - manual
       if(grabar_temp_manual == true){
-        unsigned long currentMillis = millis();
+        static unsigned long currentMillis = millis();
         if (currentMillis - previousMillis >= interval) {
-        // save the last time
-        previousMillis = currentMillis;
+          // save the last time
+          previousMillis = currentMillis;
 
-        String printTemp2 ("/Temp_");
-        printTemp2.concat(grabar_temp_num_file);
-        printTemp2.concat(".txt");
-        String printSensor(temp_sen);
+          static String printTemp2 ("/Temp_");
+          printTemp2.concat(grabar_temp_num_file);
+          printTemp2.concat(".txt");
+          static String printSensor(temp_sen);
 
-        lcd.setCursor(1,3);
-        lcd.print("grabando..");
+          lcd.setCursor(1,3);
+          lcd.print("grabando..");
+          static uint8_t hora_, min_, seg_;
 
-        if(!sd_writeFile(SD, printTemp2, printSensor))
-          grabar_temp_manual = false;
-        
-        // delete printTemp;
-        // delete num_file;
+          if (getTimeRTC(hora_,min_,seg_)){
+            if (!SD.exists(printTemp2))
+              if(!sd_appendFile(SD, printTemp2,String("Tiempo, Temperatura,\n")))
+                grabar_temp_manual = false;
 
+            static String time_rtc = String(hora_) +":"+ String(min_) +":"+ String(seg_);
+            if(!sd_appendFile(SD, printTemp2, time_rtc+","+printSensor+",\n"))
+              grabar_temp_manual = false;
+          }else{
+            if (!SD.exists(printTemp2))
+              if(!sd_appendFile(SD, printTemp2, String("Temperatura,\n")))
+                  grabar_temp_manual = false;
+
+            if(!sd_appendFile(SD, printTemp2, String("Temp,") + printSensor))
+              grabar_temp_manual = false;
+          }
         }
 
-        
+        // delete currentMillis;
       }
     }
   }
 
-  // if (rtc.isrunning())
-  //   getTimeRTC();
+  
   
 }
 
