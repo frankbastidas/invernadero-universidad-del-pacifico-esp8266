@@ -21,13 +21,32 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);
 // Example for ESP8266 NodeMCU with input signals on pin D5 and D6
 #define PIN_IN1 GPIO_NUM_34
 #define PIN_IN2 GPIO_NUM_35
+
+//encoder pin 32
+#define encoderBotonPin GPIO_NUM_32
+
+// buzzer pin 25
+#define BuzzPin GPIO_NUM_25
+
+// Ventiladores pin 4
+#define VentiPin GPIO_NUM_4 
+
+// Luces pin 0
+#define LucesPin GPIO_NUM_0
 #endif
 
 //
 
+// tiempo muestreo
 unsigned long previousMillis = 0;  // will store last time LED was updated
 // constants won't change:
 const long interval = 1000;  // interval at which to blink (milliseconds)
+
+// tiempo buzzer
+unsigned long previousMillis_buzz = 0;  // will store last time LED was updated
+// constants won't change:
+const long interval_buzz = 1000;  // interval at which to blink (milliseconds)
+
 
 int sd_isconnected = false;
 int rtc_isconnected = false;
@@ -314,7 +333,7 @@ RotaryEncoder encoder(PIN_IN1, PIN_IN2, RotaryEncoder::LatchMode::FOUR3);
 
 // Setup a RotaryEncoder with 2 steps per latch for the 2 signal input pins:
 // RotaryEncoder encoder(PIN_IN1, PIN_IN2, RotaryEncoder::LatchMode::TWO03);
-#define encoderBotonPin GPIO_NUM_32
+
 long oldPosition = -999;
 #define ROTARYSTEPS 4
 #define ROTARYMIN 0
@@ -821,7 +840,7 @@ bool sd_appendFile(fs::FS &fs, String path, String message){
     sd_isconnected = false;
     return false;
   }
-  static File file = fs.open(path, FILE_APPEND);
+  File file = fs.open(path, FILE_APPEND);
   if(!file){
       Serial.println("error Sd");
       lcd.clear();
@@ -881,6 +900,10 @@ void selectOption(){
     delay(20);
     while (digitalRead(encoderBotonPin)==LOW);
     delay(10);
+    digitalWrite(BuzzPin, HIGH);
+    delay(50);
+    digitalWrite(BuzzPin, LOW);
+
 
     if (menuInvernadero.is_callable(1)){
       menuInvernadero.call_function(1);
@@ -1264,11 +1287,18 @@ void setup() {
 
   //debugging
   Serial.begin(115200);
-
   int tim_inf=1000;
 
   // ------ Iniciar Entradas/Salidas
   pinMode(encoderBotonPin, INPUT);
+  pinMode(BuzzPin, OUTPUT);
+  pinMode(VentiPin, OUTPUT);
+  pinMode(LucesPin, OUTPUT);
+
+  digitalWrite(BuzzPin, LOW);
+  digitalWrite(VentiPin, HIGH);
+  digitalWrite(LucesPin, HIGH);
+  
 
   // ------ Iniciar LCD
   lcd.init();
