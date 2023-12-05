@@ -25,6 +25,10 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);
 
 //
 
+unsigned long previousMillis = 0;  // will store last time LED was updated
+// constants won't change:
+const long interval = 1000;  // interval at which to blink (milliseconds)
+
 int sd_isconnected = false;
 int rtc_isconnected = false;
 int temp_hum_isconnected = false;
@@ -38,6 +42,7 @@ int hum_sen = 0;
 unsigned int hum_ctrl = 0;
 
 int temp_sen = 0;
+unsigned int temp_ctrl_display = 0;
 unsigned int temp_ctrl = 0;
 bool temp_estado_ctrl = false;
 char temp_estado_ctrl_text[3]; // {'O', 'F', 'F', '\0'}
@@ -56,6 +61,7 @@ bool grabar_temp_manual = false;
 int grabar_temp_hora_enc[2] = {0,0}; //{hora,min}
 int grabar_temp_hora_apag[2] = {0,0}; //{hora,min}
 int grabar_temp_num_file = 0;
+int grabar_temp_num_file_display = 0;
 
 char grabar_hum_modo_text[4]; // {'M', 'A', 'N', '\0'}
 bool grabar_hum_modo = false;
@@ -64,6 +70,7 @@ bool grabar_hum_manual = false;
 int grabar_hum_hora_enc[2] = {0,0}; //{hora,min}
 int grabar_hum_hora_apag[2] = {0,0}; //{hora,min}
 int grabar_hum_num_file = 0;
+int grabar_hum_num_file_display=0;
 
 char grabar_luz_modo_text[5]; // {'M', 'A', 'N', '\0'}
 bool grabar_luz_modo = false;
@@ -72,6 +79,7 @@ bool grabar_luz_manual = false;
 int grabar_luz_hora_enc[2] = {0,0}; //{hora,min}
 int grabar_luz_hora_apag[2] = {0,0}; //{hora,min}
 int grabar_luz_num_file = 0;
+int grabar_luz_num_file_display = 0;
 
 
 char string_on[] = "ON";
@@ -144,6 +152,7 @@ enum pantalla_num {
   P_Grabar_luz_horaapg,
 };
 
+
 // enum state_encoder{
 //   enc_scrolling,
 //   enc_switch,
@@ -207,7 +216,7 @@ LiquidLine Grabar_L4(1, 3, "Luz");
 
 //menuGrabar_temp
 LiquidLine Grabar_temp_L1(1, 0, "Menu Grabar");
-LiquidLine Grabar_temp_L2(1, 0, "# Archivo:      ", grabar_temp_num_file);
+LiquidLine Grabar_temp_L2(1, 0, "# Archivo:      ", grabar_temp_num_file_display);
 LiquidLine Grabar_temp_L3(1, 1, "Modo:          ", grabar_temp_modo_text);
 LiquidLine Grabar_temp_L4(1, 2, "Manual:        ", grabar_temp_manual_text);
 LiquidLine Grabar_temp_L5(1, 3, "Hora enc:   ", grabar_temp_hora_enc[0], ":", grabar_temp_hora_enc[1]);
@@ -215,7 +224,7 @@ LiquidLine Grabar_temp_L6(1, 4, "Hora apag:  ", grabar_temp_hora_apag[0], ":", g
 
 //pantallaGrabar_temp_num_file
 LiquidLine Grabar_temp_num_file_L1(1, 0, "# Archivo:");
-LiquidLine Grabar_temp_num_file_L2(1, 1, grabar_temp_num_file);
+LiquidLine Grabar_temp_num_file_L2(1, 1, grabar_temp_num_file_display);
 
 //pantallaGrabar_temp_modo
 LiquidLine Grabar_temp_modo_L1(1, 0, "Modo:");
@@ -235,7 +244,7 @@ LiquidLine Grabar_temp_horaapg_L2(1, 1, grabar_temp_hora_apag[0], ":", grabar_te
 
 //menuGrabar_hum
 LiquidLine Grabar_hum_L1(1, 0, "Menu Grabar");
-LiquidLine Grabar_hum_L2(1, 0, "# Archivo:      ", grabar_hum_num_file);
+LiquidLine Grabar_hum_L2(1, 0, "# Archivo:      ", grabar_hum_num_file_display);
 LiquidLine Grabar_hum_L3(1, 1, "Modo: ", grabar_hum_modo_text);
 LiquidLine Grabar_hum_L4(1, 2, "Manual: ", grabar_hum_manual_text);
 LiquidLine Grabar_hum_L5(1, 3, "Hora enc: ", grabar_hum_hora_enc[0], ":", grabar_hum_hora_enc[1]);
@@ -243,7 +252,7 @@ LiquidLine Grabar_hum_L6(1, 4, "Hora apag: ", grabar_hum_hora_apag[0], ":", grab
 
 //pantallaGrabar_hum_num_file
 LiquidLine Grabar_hum_num_file_L1(1, 0, "# Archivo:");
-LiquidLine Grabar_hum_num_file_L2(1, 1, grabar_hum_num_file);
+LiquidLine Grabar_hum_num_file_L2(1, 1, grabar_hum_num_file_display);
 
 //pantallaGrabar_hum_modo
 LiquidLine Grabar_hum_modo_L1(1, 0, "Modo:");
@@ -263,7 +272,7 @@ LiquidLine Grabar_hum_horaapg_L2(1, 1, grabar_hum_hora_apag[0], ":", grabar_hum_
 
 //menuGrabar_hum
 LiquidLine Grabar_luz_L1(1, 0, "Menu Grabar");
-LiquidLine Grabar_luz_L2(1, 0, "# Archivo:    ", grabar_luz_num_file);
+LiquidLine Grabar_luz_L2(1, 0, "# Archivo:    ", grabar_luz_num_file_display);
 LiquidLine Grabar_luz_L3(1, 1, "Modo: ", grabar_luz_modo_text);
 LiquidLine Grabar_luz_L4(1, 2, "Manual: ", grabar_luz_manual_text);
 LiquidLine Grabar_luz_L5(1, 3, "Hora enc: ", grabar_luz_hora_enc[0], ":", grabar_luz_hora_enc[1]);
@@ -271,7 +280,7 @@ LiquidLine Grabar_luz_L6(1, 4, "Hora apag: ", grabar_luz_hora_apag[0], ":", grab
 
 //pantallaGrabar_luz_num_file
 LiquidLine Grabar_luz_num_file_L1(1, 0, "# Archivo:");
-LiquidLine Grabar_luz_num_file_L2(1, 1, grabar_luz_num_file);
+LiquidLine Grabar_luz_num_file_L2(1, 1, grabar_luz_num_file_display);
 
 //pantallaGrabar_luz_modo
 LiquidLine Grabar_luz_modo_L1(1, 0, "Modo:");
@@ -318,13 +327,6 @@ RTC_DS1307 rtc;
 
 // ------ Configuración SD
 const int chipSelect = GPIO_NUM_5; //SS-11
-
-
-
-// the follow variables is a long because the time, measured in miliseconds
-// will quickly become a bigger number than can be stored in an int.
-
-long interval = 100;  // interval at which to blink (milliseconds)
 
 
 void blankFunction()
@@ -467,40 +469,40 @@ void fn_ctroLuz_horaapg(){
 }
 
 bool sd_reconected(){
-  if (!SD.begin()){
-      lcd.clear();
+  File file = SD.open("/test_conect.txt", FILE_WRITE);
+  if(!file || !sd_isconnected){
+    sd_isconnected = false;
+    SD.end();
+    lcd.clear();
+    if (!SD.begin()){
       lcd.setCursor(0, 1);
       lcd.print("   SD.. ");
       lcd.setCursor(0, 2);
       sd_isconnected = false;
       lcd.print("    No conectado");
+      file.close();
+      grabar_temp_manual = false;
+      // SD.remove("test_conect.txt");
       delay(800);
       fn_principal();
       return false;
     }
-    // SD.begin
-  // uint8_t cardType = SD.cardType();
-  // if(cardType == CARD_NONE){
-  //   lcd.clear();
-  //   lcd.setCursor(0, 1);
-  //   lcd.print("   Conectando SD.. ");
-  //   lcd.setCursor(0, 2);
-  //   if (!SD.begin()){
-  //     sd_isconnected = false;
-  //     lcd.print("    No conectado");
-  //     delay(800);
-  //     fn_principal();
-  //     return false;
-  //   }
-    //lcd.print("     Conectado");
-    //delay(800);
-    return true;
-  
+  }
+  lcd.setCursor(0, 1);
+  lcd.print("   SD.. ");
+  lcd.setCursor(0, 2);
+  sd_isconnected = true;
+  lcd.print("    Conectado");
+  SD.remove("/test_conect.txt");
+  file.close();
+  delay(800);
+  return true;
 }
 
 void fn_grabar()
 {
   lcd.clear();
+  
   if(!sd_reconected())
     return;
 
@@ -513,8 +515,8 @@ void fn_grabar()
 void fn_grabar_temp()
 {
   lcd.clear();
-  if(!sd_reconected)
-    return;
+  // if(!sd_reconected)
+    // return;
   // State_encoder = enc_scrolling;
   // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   if (grabar_temp_modo)
@@ -532,8 +534,8 @@ void fn_grabar_temp()
 void fn_grabar_temp_num_file()
 {
   lcd.clear();
-  if(!sd_reconected)
-    return;
+  // if(!sd_reconected)
+    // return;
   // State_encoder = enc_switch;
   // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_Grabar_temp_num_file);
@@ -543,8 +545,8 @@ void fn_grabar_temp_num_file()
 void fn_grabar_temp_modo()
 {
   lcd.clear();
-  if(!sd_reconected)
-    return;
+  // if(!sd_reconected)
+    // return;
   // State_encoder = enc_switch;
   // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_Grabar_temp_modo);
@@ -554,8 +556,8 @@ void fn_grabar_temp_modo()
 void fn_grabar_temp_manual()
 {
   lcd.clear();
-  if(!sd_reconected)
-    return;
+  // if(!sd_reconected)
+    // return;
   // State_encoder = enc_switch;
   // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_Grabar_temp_manual);
@@ -565,8 +567,8 @@ void fn_grabar_temp_manual()
 void fn_grabar_temp_horaenc()
 {
   lcd.clear();
-  if(!sd_reconected)
-    return;
+  // if(!sd_reconected)
+    // return;
   // encoder.setPosition(grabar_temp_hora_enc[0]);
   // State_encoder = enc_poll;
   // fcline_menuAnterior = menuInvernadero.get_focusedLine();
@@ -577,8 +579,8 @@ void fn_grabar_temp_horaenc()
 void fn_grabar_temp_horaapg()
 {
   lcd.clear();
-  if(!sd_reconected)
-    return;
+  // if(!sd_reconected)
+    // return;
   // encoder.setPosition(grabar_temp_hora_apag[0]);
   // State_encoder = enc_poll;
   // fcline_menuAnterior = menuInvernadero.get_focusedLine();
@@ -589,8 +591,8 @@ void fn_grabar_temp_horaapg()
 void fn_grabar_hum()
 {
   lcd.clear();
-  if(!sd_reconected)
-    return;
+  // if(!sd_reconected)
+    // return;
   // State_encoder = enc_scrolling;
   // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   if (grabar_hum_modo)
@@ -608,8 +610,8 @@ void fn_grabar_hum()
 void fn_grabar_hum_num_file()
 {
   lcd.clear();
-  if(!sd_reconected)
-    return;
+  // if(!sd_reconected)
+    // return;
   // State_encoder = enc_switch;
   // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_Grabar_hum_num_file);
@@ -619,8 +621,8 @@ void fn_grabar_hum_num_file()
 void fn_grabar_hum_modo()
 {
   lcd.clear();
-  if(!sd_reconected)
-    return;
+  // if(!sd_reconected)
+    // return;
   // State_encoder = enc_switch;
   // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_Grabar_hum_modo);
@@ -630,8 +632,8 @@ void fn_grabar_hum_modo()
 void fn_grabar_hum_manual()
 {
   lcd.clear();
-  if(!sd_reconected)
-    return;
+  // if(!sd_reconected)
+    // return;
   // State_encoder = enc_switch;
   // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_Grabar_hum_manual);
@@ -641,8 +643,8 @@ void fn_grabar_hum_manual()
 void fn_grabar_hum_horaenc()
 {
   lcd.clear();
-  if(!sd_reconected)
-    return;
+  // if(!sd_reconected)
+    // return;
   // encoder.setPosition(grabar_hum_hora_enc[0]);
   // State_encoder = enc_poll;
   // fcline_menuAnterior = menuInvernadero.get_focusedLine();
@@ -653,8 +655,8 @@ void fn_grabar_hum_horaenc()
 void fn_grabar_hum_horaapg()
 {
   lcd.clear();
-  if(!sd_reconected)
-    return;
+  // if(!sd_reconected)
+    // return;
   // encoder.setPosition(grabar_hum_hora_apag[0]);
   // State_encoder = enc_poll;
   // fcline_menuAnterior = menuInvernadero.get_focusedLine();
@@ -665,8 +667,8 @@ void fn_grabar_hum_horaapg()
 void fn_grabar_luz()
 {
   lcd.clear();
-  if(!sd_reconected)
-    return;
+  // if(!sd_reconected)
+    // return;
   // State_encoder = enc_scrolling;
   // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   if (grabar_luz_modo)
@@ -684,8 +686,8 @@ void fn_grabar_luz()
 void fn_grabar_luz_num_file()
 {
   lcd.clear();
-  if(!sd_reconected)
-    return;
+  // if(!sd_reconected)
+    // return;
   // State_encoder = enc_switch;
   // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_Grabar_luz_num_file);
@@ -695,8 +697,8 @@ void fn_grabar_luz_num_file()
 void fn_grabar_luz_modo()
 {
   lcd.clear();
-  if(!sd_reconected)
-    return;
+  // if(!sd_reconected)
+    // return;
   // State_encoder = enc_switch;
   // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_Grabar_luz_modo);
@@ -706,8 +708,8 @@ void fn_grabar_luz_modo()
 void fn_grabar_luz_manual()
 {
   lcd.clear();
-  if(!sd_reconected)
-    return;
+  // if(!sd_reconected)
+    // return;
   // State_encoder = enc_switch;
   // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   menuInvernadero.change_screen2(P_Grabar_luz_manual);
@@ -717,8 +719,8 @@ void fn_grabar_luz_manual()
 void fn_grabar_luz_horaenc()
 {
   lcd.clear();
-  if(!sd_reconected)
-    return;
+  // if(!sd_reconected)
+    // return;
   // encoder.setPosition(grabar_luz_hora_enc[0]);
   // State_encoder = enc_poll;
   // fcline_menuAnterior = menuInvernadero.get_focusedLine();
@@ -729,8 +731,8 @@ void fn_grabar_luz_horaenc()
 void fn_grabar_luz_horaapg()
 {
   lcd.clear();
-  if(!sd_reconected)
-    return;
+  // if(!sd_reconected)
+    // return;
   // encoder.setPosition(grabar_luz_hora_apag[0]);
   // State_encoder = enc_poll;
   // fcline_menuAnterior = menuInvernadero.get_focusedLine();
@@ -825,23 +827,35 @@ void sd_appendFile(fs::FS &fs, const char * path, const char * message){
     file.close();
 }
 
-bool sd_writeFile(fs::FS &fs, const char * path, const char * message){
-
+bool sd_writeFile(fs::FS &fs, String path, String message){
+   
   Serial.printf("Writing file: %s\n", path);
-
-    File file = fs.open(path, FILE_WRITE);
-    if(!file){
-        Serial.println("Failed to open file for writing");
-        return false;
-    }
-    if(file.print(message)){
-        Serial.println("File written");
-        file.close();
-        return true;
-    } else {
-        Serial.println("Write failed");
-    }
-    file.close();
+  
+  if(!sd_isconnected || (SD.cardType()==CARD_NONE)){
+    sd_isconnected = false;
+    return false;
+  }
+  File file = fs.open(path, FILE_WRITE);
+  if(!file){
+      Serial.println("error Sd");
+      lcd.clear();
+      lcd.setCursor(1,1);
+      lcd.print("  SD: ERROR");
+      lcd.setCursor(1,2);
+      lcd.print(" Escribiendo");
+      delay(2000);
+      sd_isconnected = false;
+      fn_principal();
+      // SD.end();
+      return false;
+  }
+  if(file.print(message)){
+      Serial.println("File written");
+  } else {
+      Serial.println("Write failed");
+  }
+  file.close();
+  return true;
 }
 
 void selectOption(){
@@ -854,7 +868,6 @@ void selectOption(){
       menuInvernadero.call_function(1);
       
       if(menuInvernadero.get_currentScreen()->get_encoder_interaction()==LiquidScreen::enc_time){
-        
         lcd_pos_hora = 1;
         int _valTime = getVal_time(time_select);
         encoder.setPosition(_valTime);
@@ -916,8 +929,6 @@ void selectOption(){
           grabar_temp_modo = true;
         else
           grabar_temp_modo = false;
-        
-        
         }
         break;
       case P_Grabar_temp_manual:
@@ -965,14 +976,29 @@ void selectOption(){
         break;
       }
       if(change_pan){
-        
-
         fn_monitorizar();
       }
       else
         pantalla_anterior();
-    }
-    else if(menuInvernadero.get_currentScreen()->get_encoder_interaction()==LiquidScreen::enc_nothing){
+    }else if (menuInvernadero.get_currentScreen()->get_encoder_interaction()==LiquidScreen::enc_polling){
+      switch (menuInvernadero.get_currentNumScreen() + 1){
+        case P_CtrlTemperatura_ctrlTemp:
+          temp_ctrl = temp_ctrl_display; 
+          break;
+        case P_Grabar_temp_num_file:
+          grabar_temp_num_file = grabar_temp_num_file_display; 
+          break;
+        case P_Grabar_hum_num_file:
+          grabar_hum_num_file = grabar_hum_num_file_display; 
+          break;
+        case P_Grabar_luz_num_file:
+          grabar_luz_num_file = grabar_luz_num_file_display; 
+          break;
+        default:
+          break;
+        }
+      pantalla_anterior();
+    }else if(menuInvernadero.get_currentScreen()->get_encoder_interaction()==LiquidScreen::enc_nothing){
       if((menuInvernadero.get_currentNumScreen() + 1) == P_MenuMonitorizar)
         fn_principal();
     }else
@@ -1055,14 +1081,6 @@ void switch_encoder(bool state_sw){
 
 void poll_encoder(int posEnc){
   int curr_NumScreen = menuInvernadero.get_currentNumScreen() + 1;
-  
-  // if(curr_NumScreen == P_CtrlTemperatura_ctrlTemp){
-  //  if (posEnc > 50) {
-  //     encoder.setPosition(50);
-  //     posEnc = 50;
-  //   } // if
-  //   temp_ctrl = posEnc; 
-  // }
 
   int MaxFiles = 1000;
   switch (curr_NumScreen)
@@ -1072,28 +1090,28 @@ void poll_encoder(int posEnc){
         encoder.setPosition(50);
         posEnc = 50;
       } // if
-    temp_ctrl = posEnc; 
+    temp_ctrl_display = posEnc; 
   break;
   case P_Grabar_temp_num_file:
     if (posEnc > MaxFiles) {
       encoder.setPosition(MaxFiles);
       posEnc = MaxFiles;
     } // if
-    grabar_temp_num_file = posEnc; 
+    grabar_temp_num_file_display = posEnc; 
     break;
   case P_Grabar_hum_num_file:
     if (posEnc > MaxFiles) {
       encoder.setPosition(MaxFiles);
       posEnc = MaxFiles;
     } // if
-    grabar_hum_num_file = posEnc; 
+    grabar_hum_num_file_display = posEnc; 
     break;
   case P_Grabar_luz_num_file:
     if (posEnc > MaxFiles) {
       encoder.setPosition(MaxFiles);
       posEnc = MaxFiles;
     } // if
-    grabar_luz_num_file = posEnc; 
+    grabar_luz_num_file_display = posEnc; 
     break;
   default:
     break;
@@ -1291,15 +1309,18 @@ void setup() {
   lcd.setCursor(0, 2);
   // delay(2000);
   if (!SD.begin()){
-    sd_isconnected=true;
+    sd_isconnected = false;
     lcd.print("    No conectado");
-  }else
+  }else{
+    sd_isconnected = true;
     lcd.print("     Conectado");
+  }
+  lcd.setCursor(0, 3);
   uint8_t cardType = SD.cardType();
   if(cardType == CARD_NONE){
-      lcd.print("NO card montado");
+      lcd.print("  NO card montado");
     }
-  delay(tim_inf);
+  delay(tim_inf+500);
   lcd.clear();
 
      // ------ Iniciar menus/submenus
@@ -1579,7 +1600,6 @@ void setup() {
 }
 
 
-
 void loop() {
 
   selectOption();
@@ -1590,48 +1610,37 @@ void loop() {
   if(C_screen == 1){ // screen Monitorizar
     if(Sht31_update()) // si cambia valores de temp o hum, actualizar pantalla
       menuInvernadero.update();
-    lcd.setCursor(1,2);
-    lcd.print(grabar_temp_modo);
-    lcd.setCursor(1,3);
-    lcd.print(grabar_temp_manual);
     
     if(grabar_temp_modo == false){ //true-modo Automatic, false - manual
       if(grabar_temp_manual == true){
-        char printSomenumber[20];
-        itoa(temp_sen, printSomenumber, 10);
-        
+        unsigned long currentMillis = millis();
+        if (currentMillis - previousMillis >= interval) {
+        // save the last time
+        previousMillis = currentMillis;
+
+        String printTemp2 ("/Temp_");
+        printTemp2.concat(grabar_temp_num_file);
+        printTemp2.concat(".txt");
+        String printSensor(temp_sen);
+
         lcd.setCursor(1,3);
         lcd.print("grabando..");
-        sd_appendFile(SD, "/temp.txt", printSomenumber);
-        sd_writeFile(SD, "/hello.txt", "Hello ");
-        sd_appendFile(SD, "/hello.txt", "World!\n");
+
+        if(!sd_writeFile(SD, printTemp2, printSensor))
+          grabar_temp_manual = false;
+        
+        // delete printTemp;
+        // delete num_file;
+
+        }
+
+        
       }
     }
   }
 
-  
-
-    
-  
   // if (rtc.isrunning())
   //   getTimeRTC();
-
-
-
-  // }
-
-  // if(digitalRead(bt1)==LOW){
-  //   menuInvernadero.switch_focus(true);
-  //   menuInvernadero.update();
-  //   while (digitalRead(bt1)==LOW);
-  //   delay(100);
-  // }else if (digitalRead(bt2)==LOW)
-  // {
-  //   menuInvernadero.switch_focus(false);
-  //   menuInvernadero.update();
-  //   while (digitalRead(bt2)==LOW);
-  //   delay(100);
-  // }
   
 }
 
