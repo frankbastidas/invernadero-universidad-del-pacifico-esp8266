@@ -342,7 +342,7 @@ long oldPosition = -999;
 
 // ------ Configuración Reloj
 RTC_DS1307 rtc;
-// static DS1307 RTC;
+// DS1307 RTC;
 
 // ------ Configuración SD
 const int chipSelect = GPIO_NUM_5; //SS-11
@@ -819,13 +819,15 @@ int getVal_time(int _time){
 
 bool getTimeRTC(uint8_t &_hora, uint8_t &_min, uint8_t &_seg){
 
-  DateTime now = rtc.now();
   if(!rtc.isrunning()){
-    Serial.println("RTC No conectado");
+    if(Serial.available())
+      Serial.println("RTC No conectado");
     return false;
   }
-  Serial.println("RTC conectado");
-
+  if(Serial.available())
+    Serial.println("RTC conectado");
+  
+  DateTime now = rtc.now();
   _hora = now.hour();
   _min = now.minute();
   _seg = now.second();
@@ -842,22 +844,25 @@ bool sd_appendFile(fs::FS &fs, String path, String message){
   }
   File file = fs.open(path, FILE_APPEND);
   if(!file){
+    if(Serial.available())
       Serial.println("error Sd");
-      lcd.clear();
-      lcd.setCursor(1,1);
-      lcd.print("  SD: ERROR");
-      lcd.setCursor(1,2);
-      lcd.print(" Escribiendo");
-      delay(2000);
-      sd_isconnected = false;
-      fn_principal();
-      // SD.end();
-      return false;
+    lcd.clear();
+    lcd.setCursor(1,1);
+    lcd.print("  SD: ERROR");
+    lcd.setCursor(1,2);
+    lcd.print(" Escribiendo");
+    delay(2000);
+    sd_isconnected = false;
+    fn_principal();
+    // SD.end();
+    return false;
   }
 
     if(file.print(message)){
+      if(Serial.available())
         Serial.println("Message appended");
     } else {
+      if(Serial.available())
         Serial.println("Append failed");
     }
     file.close();
@@ -874,21 +879,24 @@ bool sd_writeFile(fs::FS &fs, String path, String message){
   }
   File file = fs.open(path, FILE_WRITE);
   if(!file){
+    if(Serial.available())
       Serial.println("error Sd");
-      lcd.clear();
-      lcd.setCursor(1,1);
-      lcd.print("  SD: ERROR");
-      lcd.setCursor(1,2);
-      lcd.print(" Escribiendo");
-      delay(2000);
-      sd_isconnected = false;
-      fn_principal();
-      // SD.end();
-      return false;
+    lcd.clear();
+    lcd.setCursor(1,1);
+    lcd.print("  SD: ERROR");
+    lcd.setCursor(1,2);
+    lcd.print(" Escribiendo");
+    delay(2000);
+    sd_isconnected = false;
+    fn_principal();
+    // SD.end();
+    return false;
   }
   if(file.print(message)){
+    if(Serial.available())
       Serial.println("File written");
   } else {
+    if(Serial.available())
       Serial.println("Write failed");
   }
   file.close();
@@ -1228,7 +1236,7 @@ void poll_encoder(int posEnc){
 
 void encoderRotating(){
   // funcion para scrolling
-  static int pos = 0;
+  int pos = 0;
   encoder.tick();
   RotaryEncoder::Direction En_direction = encoder.getDirection();
 
@@ -1653,34 +1661,43 @@ void loop() {
   selectOption();
   encoderRotating();
 
-  static int C_screen = menuInvernadero.get_currentNumScreen();
+  static int C_screen;
+  C_screen = menuInvernadero.get_currentNumScreen();
+  // Serial.println(C_screen);
 
   if(C_screen == 1){ // screen Monitorizar
     if(Sht31_update()) // si cambia valores de temp o hum, actualizar pantalla
-      menuInvernadero.update();
-    
-    if(grabar_temp_modo == false){ //true-modo Automatic, false - manual
+        menuInvernadero.update();
+    // lcd.setCursor(3,2);
+    // lcd.print(grabar_temp_modo);
+    // lcd.setCursor(3,3);
+    // lcd.print(grabar_temp_manual);
+  }
+
+  if(grabar_temp_modo == false){ //true-modo Automatic, false - manual
       if(grabar_temp_manual == true){
-        static unsigned long currentMillis = millis();
+        // if(Serial.available() > 0)
+        //   Serial.println("Aqui es");
+        unsigned long currentMillis = millis();
         if (currentMillis - previousMillis >= interval) {
           // save the last time
           previousMillis = currentMillis;
 
-          static String printTemp2 ("/Temp_");
+          String printTemp2 ("/Temp_");
           printTemp2.concat(grabar_temp_num_file);
           printTemp2.concat(".txt");
-          static String printSensor(temp_sen);
+          String printSensor(temp_sen);
 
           lcd.setCursor(1,3);
           lcd.print("grabando..");
-          static uint8_t hora_, min_, seg_;
+          uint8_t hora_, min_, seg_;
 
           if (getTimeRTC(hora_,min_,seg_)){
             if (!SD.exists(printTemp2))
               if(!sd_appendFile(SD, printTemp2,String("Tiempo, Temperatura,\n")))
                 grabar_temp_manual = false;
 
-            static String time_rtc = String(hora_) +":"+ String(min_) +":"+ String(seg_);
+            String time_rtc = String(hora_) +":"+ String(min_) +":"+ String(seg_);
             if(!sd_appendFile(SD, printTemp2, time_rtc+","+printSensor+",\n"))
               grabar_temp_manual = false;
           }else{
@@ -1692,62 +1709,28 @@ void loop() {
               grabar_temp_manual = false;
           }
         }
+      }
+    }else if(grabar_temp_modo == true){ //true-modo Automatic, false - manual
+      uint8_t hora_, min_, seg_;
+      if (getTimeRTC(hora_,min_,seg_)){
+        
+        // if(hora_)
+        String printTemp2 ("/Temp_");
+        printTemp2.concat(grabar_temp_num_file);
+        printTemp2.concat(".txt");
+        String printSensor(temp_sen);
 
-        // delete currentMillis;
+        lcd.setCursor(1,3);
+        lcd.print("grabando..");
+
+        if (!SD.exists(printTemp2))
+            if(!sd_appendFile(SD, printTemp2,String("Tiempo, Temperatura,\n")))
+              grabar_temp_manual = false;
       }
     }
-  }
+
+    
 
   
   
 }
-
-// if(menuInvernadero.)
-  //lcd.setCursor(1, 1);
-  //lcd.print(SHT2x_LIB_VERSION);
-  //lcd.clear();
-  /* 
-
-  long newPosition = myEnc.read();
-  if (newPosition != oldPosition) {
-    oldPosition = newPosition;
-    //Serial.println(newPosition);
-    lcd.setCursor(0, 0);
-    lcd.print(newPosition);
-  }
-*/
-
-  /*lcd.setCursor(0, 0);
-  lcd.print(RTC.getDay());
-  lcd.print("-");
-  lcd.print(RTC.getMonth());
-  lcd.print("-");
-  lcd.print(RTC.getYear());
-
-  lcd.setCursor(0, 1);
-  lcd.print(RTC.getHours());
-  lcd.print(":");
-  lcd.print(RTC.getMinutes());
-  lcd.print(":");
-  lcd.print(RTC.getSeconds());
-  delay(1000);*/
-
-  /*
-  // open the file. note that only one file can be open at a time,
-  // so you have to close this one before opening another.
-  File dataFile = SD.open("datalog.txt", FILE_WRITE);
-  // if the file is available, write to it:
-  // make a string for assembling the data to log:
-  String dataString = "";
-  lcd.setCursor(0, 1);
-  if (dataFile) {
-    dataString = String(RTC.getHours()) + ":" + String(RTC.getMinutes()) + ":" + String(RTC.getSeconds());
-    dataFile.println(dataString);
-    dataFile.close();
-    // print to the serial port too:
-    lcd.println(dataString);
-  }
-  // if the file isn't open, pop up an error:
-  else {
-    lcd.println("error opening datalog.txt");
-  }*/
