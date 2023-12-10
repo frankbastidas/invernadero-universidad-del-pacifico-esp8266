@@ -19,20 +19,27 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);
 #if defined(ESP32)
 #include <FS.h>
 // Example for ESP8266 NodeMCU with input signals on pin D5 and D6
-#define PIN_IN1 GPIO_NUM_34
-#define PIN_IN2 GPIO_NUM_35
+#define PIN_IN1 GPIO_NUM_0
+#define PIN_IN2 GPIO_NUM_4
 
-//encoder pin 32
-#define encoderBotonPin GPIO_NUM_32
+//encoder pin 2
+#define encoderBotonPin GPIO_NUM_2
 
-// buzzer pin 25
-#define BuzzPin GPIO_NUM_25
+// buzzer pin 515
+#define BuzzPin GPIO_NUM_15
 
-// Ventiladores pin 4
-#define VentiPin GPIO_NUM_4 
+// Ventiladores ON pin 27
+#define VentiOnPin GPIO_NUM_27
 
-// Luces pin 0
-#define LucesPin GPIO_NUM_0
+// Ventiladores OFF pin 26
+#define VentiOffPin GPIO_NUM_26
+
+// Luces On pin 14
+#define LucesOnPin GPIO_NUM_14
+
+// Luces Off pin 12
+#define LucesOffPin GPIO_NUM_12
+
 #endif
 
 //
@@ -1246,6 +1253,7 @@ void encoderRotating(){
     case LiquidScreen::enc_scrolling:
       {
         if (menuInvernadero.is_callable(1)){
+          Serial.println("ROTANDO..");
           if (En_direction == RotaryEncoder::Direction::CLOCKWISE)
             menuInvernadero.switch_focus(true);
           else if (En_direction == RotaryEncoder::Direction::COUNTERCLOCKWISE)
@@ -1300,13 +1308,17 @@ void setup() {
   // ------ Iniciar Entradas/Salidas
   pinMode(encoderBotonPin, INPUT);
   pinMode(BuzzPin, OUTPUT);
-  pinMode(VentiPin, OUTPUT);
-  pinMode(LucesPin, OUTPUT);
+  pinMode(VentiOnPin, OUTPUT);
+  pinMode(VentiOffPin, OUTPUT);
+  pinMode(LucesOnPin, OUTPUT);
+  pinMode(LucesOffPin, OUTPUT);
 
   digitalWrite(BuzzPin, LOW);
-  digitalWrite(VentiPin, HIGH);
-  digitalWrite(LucesPin, HIGH);
-  
+  digitalWrite(VentiOnPin, HIGH);
+  digitalWrite(VentiOffPin, HIGH);
+  digitalWrite(LucesOnPin, HIGH);
+  digitalWrite(LucesOffPin, HIGH);
+
 
   // ------ Iniciar LCD
   lcd.init();
@@ -1665,7 +1677,8 @@ void loop() {
   C_screen = menuInvernadero.get_currentNumScreen();
   // Serial.println(C_screen);
 
-  if(C_screen == 1){ // screen Monitorizar
+// screen Monitorizar
+  if(C_screen == 1){ 
     if(Sht31_update()) // si cambia valores de temp o hum, actualizar pantalla
         menuInvernadero.update();
     // lcd.setCursor(3,2);
@@ -1674,8 +1687,13 @@ void loop() {
     // lcd.print(grabar_temp_manual);
   }
 
-  if(grabar_temp_modo == false){ //true-modo Automatic, false - manual
-      if(grabar_temp_manual == true){
+//Control temperatura
+  if(temp_estado_ctrl && (temp_ctrl > 10)){
+    
+  }
+
+//Grabar datos - temperatura - Manual - On
+  if(!grabar_temp_modo && grabar_temp_manual){ //true-modo Automatic, false - manual
         // if(Serial.available() > 0)
         //   Serial.println("Aqui es");
         unsigned long currentMillis = millis();
@@ -1708,8 +1726,7 @@ void loop() {
             if(!sd_appendFile(SD, printTemp2, String("Temp,") + printSensor))
               grabar_temp_manual = false;
           }
-        }
-      }
+        }      
     }else if(grabar_temp_modo == true){ //true-modo Automatic, false - manual
       uint8_t hora_, min_, seg_;
       if (getTimeRTC(hora_,min_,seg_)){
