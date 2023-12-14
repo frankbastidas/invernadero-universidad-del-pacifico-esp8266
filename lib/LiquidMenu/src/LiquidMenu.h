@@ -410,6 +410,41 @@ public:
     add_variable(variableD);
   }
 
+    /// Constructor for five variables/constants.
+  /**
+  @param column - the column at which the line starts
+  @param row - the row at which the line is printed
+  @param &variableA - variable/constant to be printed
+  @param &variableB - variable/constant to be printed
+  @param &variableC - variable/constant to be printed
+  @param &variableD - variable/constant to be printed
+  @param &variableE - variable/constant to be printed
+  */
+  template <typename A, typename B, typename C, typename D, typename E>
+  LiquidLine(uint8_t column, uint8_t row,
+             A &variableA, B &variableB, C &variableC, D &variableD, E &variableE)
+    : LiquidLine(column, row, variableA, variableB, variableC, variableD) {
+    add_variable(variableE);
+  }
+
+    /// Constructor for six variables/constants.
+  /**
+  @param column - the column at which the line starts
+  @param row - the row at which the line is printed
+  @param &variableA - variable/constant to be printed
+  @param &variableB - variable/constant to be printed
+  @param &variableC - variable/constant to be printed
+  @param &variableD - variable/constant to be printed
+  @param &variableE - variable/constant to be printed
+  @param &variableF - variable/constant to be printed
+  */
+  template <typename A, typename B, typename C, typename D, typename E, typename F>
+  LiquidLine(uint8_t column, uint8_t row,
+             A &variableA, B &variableB, C &variableC, D &variableD, E &variableE, F &variableF)
+    : LiquidLine(column, row, variableA, variableB, variableC, variableD, variableE) {
+    add_variable(variableF);
+  }
+
   ///@}
 
 

@@ -4,7 +4,7 @@
 #include <SD.h>
 #include <LiquidMenu.h>
 #include <RotaryEncoder.h>
-#include "RTClib.h"
+#include <RTClib.h>
 // #include <Arduino.h>
 
 // ------ Configuración del LCD
@@ -54,12 +54,19 @@ unsigned long previousMillis_buzz = 0;  // will store last time LED was updated
 // constants won't change:
 const long interval_buzz = 1000;  // interval at which to blink (milliseconds)
 
+// tiempo hora actual
+unsigned long previousMillis_hora_actual = 0;  // will store last time LED was updated
+// constants won't change:
+const long interval_hora_actual = 1000; 
 
 int sd_isconnected = false;
 int rtc_isconnected = false;
 int temp_hum_isconnected = false;
 
 // ------ Variables
+int hora_actual[3]; // {hora,min,seg}
+int hora_previus[3]={0,0,0};
+
 int lcd_pos_hora=0;
 
 int time_select = 0;
@@ -72,31 +79,43 @@ unsigned int temp_ctrl_display = 0;
 unsigned int temp_ctrl = 0;
 bool temp_estado_ctrl = false;
 char temp_estado_ctrl_text[3]; // {'O', 'F', 'F', '\0'}
+int umbral_temp_ctrl = 5;
+bool temp_toggle_flag = false;
 
-char luz_modo_text[4]; // {'M', 'A', 'N', '\0'}
-bool luz_modo = false;
+// char luz_modo_text[4]; // {'M', 'A', 'N', '\0'}
+// bool luz_modo = false;
 char luz_manual_text[4]; // {'O', 'F', 'F', '\0'}
 bool luz_manual = false;
 int luz_hora_enc[2] = {0,0}; //{hora,min}
+int luz_hora_enc_display[2] = {0,0}; //{hora,min}
 int luz_hora_apag[2] = {0,0}; //{hora,min}
+int luz_hora_apag_display[2] = {0,0}; //{hora,min}
+bool luz_toogle_flag = false;
+bool luz_toogle_flag_previus = luz_toogle_flag;
 
 char grabar_temp_modo_text[5]; // {'M', 'A', 'N', '\0'}
 bool grabar_temp_modo = false; // true- automatic, false - manual
 char grabar_temp_manual_text[5]; // {'O', 'F', 'F', '\0'}
 bool grabar_temp_manual = false;
 int grabar_temp_hora_enc[2] = {0,0}; //{hora,min}
+int grabar_temp_hora_enc_display[2] = {0,0}; //{hora,min}
 int grabar_temp_hora_apag[2] = {0,0}; //{hora,min}
+int grabar_temp_hora_apag_display[2] = {0,0}; //{hora,min}
 int grabar_temp_num_file = 0;
 int grabar_temp_num_file_display = 0;
+bool grabar_temp_flag = false;
 
 char grabar_hum_modo_text[4]; // {'M', 'A', 'N', '\0'}
 bool grabar_hum_modo = false;
 char grabar_hum_manual_text[4]; // {'O', 'F', 'F', '\0'}
 bool grabar_hum_manual = false;
 int grabar_hum_hora_enc[2] = {0,0}; //{hora,min}
+int grabar_hum_hora_enc_display[2] = {0,0}; //{hora,min}
 int grabar_hum_hora_apag[2] = {0,0}; //{hora,min}
+int grabar_hum_hora_apag_display[2] = {0,0}; //{hora,min}
 int grabar_hum_num_file = 0;
 int grabar_hum_num_file_display=0;
+bool grabar_hum_flag = false;
 
 char grabar_luz_modo_text[5]; // {'M', 'A', 'N', '\0'}
 bool grabar_luz_modo = false;
@@ -106,12 +125,14 @@ int grabar_luz_hora_enc[2] = {0,0}; //{hora,min}
 int grabar_luz_hora_apag[2] = {0,0}; //{hora,min}
 int grabar_luz_num_file = 0;
 int grabar_luz_num_file_display = 0;
+bool grabar_luz_flag = false;
 
+char grabar_notif[15];
 
-char string_on[] = "ON";
-char string_off[] = "OFF";
-char string_man[] = "MANU";
-char string_auto[] = "AUTO";
+const char string_on[] = "ON";
+const char string_off[] = "OFF";
+const char string_man[] = "MANU";
+const char string_auto[] = "AUTO";
 // ------ Configuración de Menus/submenus
 //Menus
 LiquidScreen pantallaMenuPrincipal;
@@ -120,7 +141,6 @@ LiquidScreen pantallaCtrlTemperatura;
 LiquidScreen pantallaCtrlTemperatura_ctrlStatus;
 LiquidScreen pantallaCtrlTemperatura_ctrlTemp;
 LiquidScreen pantallaCtrlLuz;
-LiquidScreen pantallaCtrlLuz_modo;
 LiquidScreen pantallaCtrlLuz_manual;
 LiquidScreen pantallaCtrlLuz_horaLuz_enc;
 LiquidScreen pantallaCtrlLuz_horaLuz_apag;
@@ -153,7 +173,6 @@ enum pantalla_num {
   P_CtrlTemperatura_ctrlStatus,
   P_CtrlTemperatura_ctrlTemp,
   P_CtrlLuz,
-  P_CtrlLuz_modo,
   P_CtrlLuz_manual,
   P_CtrlLuz_horaLuz_enc,
   P_CtrlLuz_horaLuz_apag,
@@ -192,11 +211,14 @@ LiquidLine Prin_L3(1, 2, "Control Luz");
 LiquidLine Prin_L4(1, 3, "Grabar Datos");
 
 //menuMonitorizar
-LiquidLine Mon_L1_1(0, 0, "T:");
-LiquidLine Mon_L1_2(2, 0, temp_sen, "/", temp_ctrl, "\337");
-LiquidLine Mon_L1_3(8, 0, "H:");
-LiquidLine Mon_L1_4(10, 0, hum_sen, "%");
-LiquidLine Mon_L2_1(0, 1, "CtrlTemp:  ", temp_estado_ctrl_text);
+LiquidLine Mon_L1_1(0, 0, "T:", temp_sen, "/");
+LiquidLine Mon_L1_2(5, 0, temp_ctrl, "\337");
+LiquidLine Mon_L1_3(12, 0, "H:", hum_sen, "%");
+LiquidLine Mon_L2_1(0, 1, "T2:", temp_sen, "/");
+LiquidLine Mon_L2_2(6, 1, temp_ctrl, "\337");
+LiquidLine Mon_L2_3(12, 1, "H:", hum_sen, "%");
+LiquidLine Mon_L3_1(0, 2, "Ctrl:  ", temp_estado_ctrl_text);
+LiquidLine Mon_L4_1(0, 3, "Grabando:  ", grabar_notif);
 
 //menuCtrlTemperatura
 LiquidLine CtrlTemp_L1(1, 0, "Menu Principal");
@@ -213,17 +235,13 @@ LiquidLine CtrlTemp_temp_L2(1, 1, temp_ctrl);
 
 //menuCtrlLuz
 LiquidLine CtrlLuz_L1(1, 0, "Menu Principal");
-LiquidLine CtrlLuz_L2(1, 1, "Modo: ", luz_modo_text);
-LiquidLine CtrlLuz_L3(1, 2, "Manual: ", luz_manual_text);
+LiquidLine CtrlLuz_L2(1, 1, "Hora Act: ", hora_actual[0],":", hora_actual[1], ":", hora_actual[2]);
+LiquidLine CtrlLuz_L3(1, 2, "AUTO: ", luz_manual_text);
 LiquidLine CtrlLuz_L4(1, 3, "Hora enc: ", luz_hora_enc[0],":",luz_hora_enc[1]);
 LiquidLine CtrlLuz_L5(1, 4, "Hora apag: ", luz_hora_apag[0],":",luz_hora_apag[1]);
 
-//pantallaCtrlLuz_Modo
-LiquidLine CtrlLuz_modo_L1(1, 0, "Modo:");
-LiquidLine CtrlLuz_modo_L2(1, 1, luz_modo_text);
-
-//pantallaCtrlLuz_Manual
-LiquidLine CtrlLuz_manual_L1(1, 0, "Encender Luz:");
+//pantallaCtrlLuz_Estado Auto
+LiquidLine CtrlLuz_manual_L1(1, 0, "Estado AUTO:");
 LiquidLine CtrlLuz_manual_L2(1, 1, luz_manual_text);
 
 //pantallaCtrlLuz_horaenc
@@ -238,7 +256,7 @@ LiquidLine CtrlLuz_horaapg_L2(1, 1, luz_hora_apag[0] ,":", luz_hora_apag[1]);
 LiquidLine Grabar_L1(1, 0, "Menu Principal");
 LiquidLine Grabar_L2(1, 1, "Temperatura");
 LiquidLine Grabar_L3(1, 2, "Humedad");
-LiquidLine Grabar_L4(1, 3, "Luz");
+LiquidLine Grabar_L4(1, 3, "Hora Act: ", hora_actual[0],":", hora_actual[1], ":", hora_actual[2]);
 
 //menuGrabar_temp
 LiquidLine Grabar_temp_L1(1, 0, "Menu Grabar");
@@ -438,23 +456,11 @@ void fn_ctrlLuz()
   lcd.clear();
   // State_encoder = enc_scrolling;
   // fcline_menuAnterior = menuInvernadero.get_focusedLine();
-  if (luz_modo)
-    strncpy(luz_modo_text, string_auto, sizeof(string_auto));
-  else
-    strncpy(luz_modo_text, string_man, sizeof(string_man));
   if (luz_manual)
     strncpy(luz_manual_text, string_on, sizeof(string_on));
   else
     strncpy(luz_manual_text, string_off, sizeof(string_off));
   menuInvernadero.change_screen2(P_CtrlLuz);
-  //menuInvernadero.set_focusedLine(0);
-}
-
-void fn_ctroLuz_modo(){
-  lcd.clear();
-  // State_encoder = enc_switch;
-  // fcline_menuAnterior = menuInvernadero.get_focusedLine();
-  menuInvernadero.change_screen2(P_CtrlLuz_modo);
   //menuInvernadero.set_focusedLine(0);
 }
 
@@ -940,7 +946,40 @@ void selectOption(){
       if(time_select > 0){
         time_select = 0;
         lcd.noBlink();
+        int curr_NumScreen = menuInvernadero.get_currentNumScreen() + 1;
+
+      switch (curr_NumScreen){
+        case P_CtrlLuz_horaLuz_enc:      
+          // luz_hora_enc[time_select] = posEnc;
+          luz_hora_enc[0] = luz_hora_enc_display[0];
+          luz_hora_enc[1] = luz_hora_enc_display[1];
+          break;
+        case P_CtrlLuz_horaLuz_apag:
+          luz_hora_apag[0] = luz_hora_apag_display[0];
+          luz_hora_apag[1] = luz_hora_apag_display[1];
+          break;
+        case P_Grabar_temp_horaenc:
+          grabar_temp_hora_enc[0] = grabar_temp_hora_enc_display[0];
+          grabar_temp_hora_enc[1] = grabar_temp_hora_enc_display[1];
+          break;
+        case P_Grabar_temp_horaapg:
+          grabar_temp_hora_apag[0] = grabar_temp_hora_apag_display[0];
+          grabar_temp_hora_apag[1] = grabar_temp_hora_apag_display[1];
+          break;
+        case P_Grabar_hum_horaenc:
+          grabar_hum_hora_enc[0] = grabar_hum_hora_enc_display[0];
+          grabar_hum_hora_enc[1] = grabar_hum_hora_enc_display[1];
+          break;
+        case P_Grabar_hum_horaapg:
+          grabar_hum_hora_apag[0] = grabar_hum_hora_apag_display[0];
+          grabar_hum_hora_apag[1] = grabar_hum_hora_apag_display[1];
+          break;
+        default:
+          break;
+      }
         pantalla_anterior();
+
+
       }else{
         time_select++;
 
@@ -960,23 +999,16 @@ void selectOption(){
         // temp_estado_ctrl = state_sw;
         if(String(temp_estado_ctrl_text).equals(string_on)){
           temp_estado_ctrl=true;
-          change_pan = true;
+          change_pan = false;
         }else
           temp_estado_ctrl=false;
         
         break;
-      case P_CtrlLuz_modo:
-        // luz_modo = state_sw;
-        if(String(luz_modo_text).equals(string_auto))
-          luz_modo=true;
-        else
-          luz_modo=false;
-        break;  
       case P_CtrlLuz_manual:
         // luz_manual = state_sw;
         if(String(luz_manual_text).equals(string_on)){
         luz_manual=true;
-        change_pan = true;
+        change_pan = false;
         }else
         luz_manual=false;
         break; 
@@ -1073,13 +1105,6 @@ void switch_encoder(bool state_sw){
     else
       strncpy(temp_estado_ctrl_text, string_off, sizeof(string_off));
     break;
-  case P_CtrlLuz_modo:
-    // luz_modo = state_sw;
-    if(state_sw)
-      strncpy(luz_modo_text, string_auto, sizeof(string_auto));
-    else
-      strncpy(luz_modo_text, string_man, sizeof(string_man));
-    break;  
   case P_CtrlLuz_manual:
     // luz_manual = state_sw;
     if(state_sw)
@@ -1160,7 +1185,7 @@ void poll_encoder(int posEnc){
       encoder.setPosition(MaxFiles);
       posEnc = MaxFiles;
     } // if
-    grabar_hum_num_file_display = posEnc; 
+    grabar_hum_num_file_display = posEnc;
     break;
   case P_Grabar_luz_num_file:
     if (posEnc > MaxFiles) {
@@ -1196,28 +1221,23 @@ void poll_encoder(int posEnc){
     }
     switch (curr_NumScreen){
       case P_CtrlLuz_horaLuz_enc:      
-        luz_hora_enc[time_select] = posEnc;
+        // luz_hora_enc[time_select] = posEnc;
+        luz_hora_enc_display[time_select] = posEnc;
         break;
       case P_CtrlLuz_horaLuz_apag:
-        luz_hora_apag[time_select] = posEnc;
+        luz_hora_apag_display[time_select] = posEnc;
         break;
       case P_Grabar_temp_horaenc:
-        grabar_temp_hora_enc[time_select] = posEnc;
+        grabar_temp_hora_enc_display[time_select] = posEnc;
         break;
       case P_Grabar_temp_horaapg:
-        grabar_temp_hora_apag[time_select] = posEnc;
+        grabar_temp_hora_apag_display[time_select] = posEnc;
         break;
       case P_Grabar_hum_horaenc:
-        grabar_hum_hora_enc[time_select] = posEnc;
+        grabar_hum_hora_enc_display[time_select] = posEnc;
         break;
       case P_Grabar_hum_horaapg:
-        grabar_hum_hora_apag[time_select] = posEnc;
-        break;
-      case P_Grabar_luz_horaenc:
-        grabar_luz_hora_enc[time_select] = posEnc;
-        break;
-      case P_Grabar_luz_horaapg:
-        grabar_luz_hora_apag[time_select] = posEnc;
+        grabar_hum_hora_apag_display[time_select] = posEnc;
         break;
       default:
         break;
@@ -1345,14 +1365,14 @@ void setup() {
     lcd.print(" Error. No iniciado");
   else{
     rtc_isconnected=true;
-    if (! rtc.isrunning()) {
-      lcd.print("Configurando hora..");
+    if (                                              rtc.isrunning()) {
+      // lcd.print("Configurando hora..");
       // When time needs to be set on a new device, or after a power loss, the
       // following line sets the RTC to the date & time this sketch was compiled
       rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
       // This line sets the RTC with an explicit date & time, for example to set
       // January 21, 2014 at 3am you would call:
-      // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
+      // rtc.adjust(DateTime(2023, 11, 12, 12, 09, 0));
       delay(200);
     }
     lcd.print("     Conectado");
@@ -1414,8 +1434,11 @@ void setup() {
   pantallaMenuMonitorizar.add_line(Mon_L1_1);
   pantallaMenuMonitorizar.add_line(Mon_L1_2);
   pantallaMenuMonitorizar.add_line(Mon_L1_3);
-  pantallaMenuMonitorizar.add_line(Mon_L1_4);
   pantallaMenuMonitorizar.add_line(Mon_L2_1);
+  pantallaMenuMonitorizar.add_line(Mon_L2_2);
+  pantallaMenuMonitorizar.add_line(Mon_L2_3);
+  pantallaMenuMonitorizar.add_line(Mon_L3_1);
+  pantallaMenuMonitorizar.add_line(Mon_L4_1);
   
   menuInvernadero.add_screen(pantallaMenuMonitorizar);
   
@@ -1455,7 +1478,7 @@ void setup() {
   pantallaCtrlLuz.add_line(CtrlLuz_L5);
 
   CtrlLuz_L1.attach_function(1, fn_principal);
-  CtrlLuz_L2.attach_function(1, fn_ctroLuz_modo);
+  CtrlLuz_L2.attach_function(1, blankFunction);
   CtrlLuz_L3.attach_function(1, fn_ctroLuz_manual);
   CtrlLuz_L4.attach_function(1, fn_ctroLuz_horaenc);
   CtrlLuz_L5.attach_function(1, fn_ctroLuz_horaapg);
@@ -1465,12 +1488,6 @@ void setup() {
   pantallaCtrlLuz.set_encoder_interaction(LiquidScreen::enc_scrolling);
   pantallaCtrlLuz.set_focusedLine(0);
   menuInvernadero.add_screen(pantallaCtrlLuz); 
-
-  // pantallaCtrlLuz_Modo
-  pantallaCtrlLuz_modo.add_line(CtrlLuz_modo_L1);
-  pantallaCtrlLuz_modo.add_line(CtrlLuz_modo_L2);
-  pantallaCtrlLuz_modo.set_encoder_interaction(LiquidScreen::enc_switch);
-  menuInvernadero.add_screen(pantallaCtrlLuz_modo);
 
   //pantallaCtrlLuz_Manual
   pantallaCtrlLuz_manual.add_line(CtrlLuz_manual_L1);
@@ -1499,7 +1516,7 @@ void setup() {
   Grabar_L1.attach_function(1, fn_principal);
   Grabar_L2.attach_function(1, fn_grabar_temp);
   Grabar_L3.attach_function(1, fn_grabar_hum);
-  Grabar_L4.attach_function(1, fn_grabar_luz);
+  Grabar_L4.attach_function(1, blankFunction);
 
   pantallaGrabar.set_focusPosition(Position::LEFT);
   pantallaGrabar.set_displayLineCount(displayLineCount);
@@ -1674,64 +1691,92 @@ void loop() {
   encoderRotating();
 
   static int C_screen;
-  C_screen = menuInvernadero.get_currentNumScreen();
+  C_screen = menuInvernadero.get_currentNumScreen() + 1;
   // Serial.println(C_screen);
 
 // screen Monitorizar
-  if(C_screen == 1){ 
+  if(C_screen == P_MenuMonitorizar){ 
     if(Sht31_update()) // si cambia valores de temp o hum, actualizar pantalla
         menuInvernadero.update();
-    // lcd.setCursor(3,2);
-    // lcd.print(grabar_temp_modo);
-    // lcd.setCursor(3,3);
-    // lcd.print(grabar_temp_manual);
+  //  if(grabar_temp_flag){
+  //   grabar_notif=
+  //  }
   }
 
 //Control temperatura
   if(temp_estado_ctrl && (temp_ctrl > 10)){
-    
+    Sht31_update();
+    if (temp_sen > (temp_ctrl + umbral_temp_ctrl)){
+      if(!temp_toggle_flag){
+        digitalWrite(VentiOffPin, HIGH); // NO ACTIVAR EL RELE DE APAGAR
+        digitalWrite(VentiOnPin, LOW); // ACTIVAR EL RELE DE ENCENDER
+        delay(50);
+        digitalWrite(VentiOnPin, HIGH); // DESACTIVAR EL RELE DE ENCENDER
+      }
+      temp_toggle_flag = true;
+    }else if(temp_sen < (temp_ctrl -umbral_temp_ctrl)){
+      if(temp_toggle_flag){
+        digitalWrite(VentiOnPin, HIGH); // NO ACTIVAR EL RELE DE ENCENDER
+        digitalWrite(VentiOffPin, LOW); // ACTIVAR EL RELE DE APAGAR
+        delay(50);
+        digitalWrite(VentiOffPin, HIGH); // DESACTIVAR EL RELE DE APAGAR
+      }
+      temp_toggle_flag = false;
+    }
+  }else{
+    if(temp_toggle_flag){
+        digitalWrite(VentiOnPin, HIGH); // NO ACTIVAR EL RELE DE ENCENDER
+        digitalWrite(VentiOffPin, LOW); // ACTIVAR EL RELE DE APAGAR
+        delay(50);
+        digitalWrite(VentiOffPin, HIGH); // DESACTIVAR EL RELE DE APAGAR
+      }
+      temp_toggle_flag = false;
   }
 
-//Grabar datos - temperatura - Manual - On
+  //Control Luces
+  if(luz_manual){
+    uint8_t hora_, min_, seg_;
+    if (getTimeRTC(hora_,min_,seg_)){
+      if(hora_== luz_hora_enc[0] && min_== luz_hora_enc[1]){
+        // bool luz_activate = true;
+        if(!luz_toogle_flag){
+          digitalWrite(LucesOffPin, HIGH); // NO ACTIVAR EL RELE DE APAGAR
+          digitalWrite(LucesOnPin, LOW); // ACTIVAR EL RELE DE ENCENDER
+          delay(50);
+          digitalWrite(LucesOnPin, HIGH); // DESACTIVAR EL RELE DE ENCENDER
+        }
+        luz_toogle_flag = true;
+      }else if(hora_== luz_hora_apag[0] && min_== luz_hora_apag[1]) {
+        if(luz_toogle_flag){
+          digitalWrite(LucesOnPin, HIGH); // NO ACTIVAR EL RELE DE ENCENDER
+          digitalWrite(LucesOffPin, LOW); // ACTIVAR EL RELE DE APAGAR
+          delay(50);
+          digitalWrite(LucesOffPin, HIGH); // DESACTIVAR EL RELE DE APAGAR
+        }
+        luz_toogle_flag = false;
+      }
+    }
+  }else{
+    if(luz_toogle_flag){
+      digitalWrite(LucesOnPin, HIGH); // NO ACTIVAR EL RELE DE ENCENDER
+      digitalWrite(LucesOffPin, LOW); // ACTIVAR EL RELE DE APAGAR
+      delay(50);
+      digitalWrite(LucesOffPin, HIGH); // DESACTIVAR EL RELE DE APAGAR
+    }
+    luz_toogle_flag = false;
+  }
+    
+
+  //Grabar datos - temperatura - Manual - On
   if(!grabar_temp_modo && grabar_temp_manual){ //true-modo Automatic, false - manual
-        // if(Serial.available() > 0)
-        //   Serial.println("Aqui es");
-        unsigned long currentMillis = millis();
-        if (currentMillis - previousMillis >= interval) {
-          // save the last time
-          previousMillis = currentMillis;
+    // if(Serial.available() > 0)
+    //   Serial.println("Aqui es");
+    grabar_temp_flag = true;
+    unsigned long currentMillis = millis();
+      if (currentMillis - previousMillis >= interval) {
+        // save the last time
+        previousMillis = currentMillis;
 
-          String printTemp2 ("/Temp_");
-          printTemp2.concat(grabar_temp_num_file);
-          printTemp2.concat(".txt");
-          String printSensor(temp_sen);
-
-          lcd.setCursor(1,3);
-          lcd.print("grabando..");
-          uint8_t hora_, min_, seg_;
-
-          if (getTimeRTC(hora_,min_,seg_)){
-            if (!SD.exists(printTemp2))
-              if(!sd_appendFile(SD, printTemp2,String("Tiempo, Temperatura,\n")))
-                grabar_temp_manual = false;
-
-            String time_rtc = String(hora_) +":"+ String(min_) +":"+ String(seg_);
-            if(!sd_appendFile(SD, printTemp2, time_rtc+","+printSensor+",\n"))
-              grabar_temp_manual = false;
-          }else{
-            if (!SD.exists(printTemp2))
-              if(!sd_appendFile(SD, printTemp2, String("Temperatura,\n")))
-                  grabar_temp_manual = false;
-
-            if(!sd_appendFile(SD, printTemp2, String("Temp,") + printSensor))
-              grabar_temp_manual = false;
-          }
-        }      
-    }else if(grabar_temp_modo == true){ //true-modo Automatic, false - manual
-      uint8_t hora_, min_, seg_;
-      if (getTimeRTC(hora_,min_,seg_)){
-        
-        // if(hora_)
         String printTemp2 ("/Temp_");
         printTemp2.concat(grabar_temp_num_file);
         printTemp2.concat(".txt");
@@ -1739,15 +1784,63 @@ void loop() {
 
         lcd.setCursor(1,3);
         lcd.print("grabando..");
+        uint8_t hora_, min_, seg_;
+
+        if (getTimeRTC(hora_,min_,seg_)){
+          if (!SD.exists(printTemp2))
+            if(!sd_appendFile(SD, printTemp2, "Tiempo, Temperatura,\n"))
+              grabar_temp_manual = false;
+
+          String time_rtc = String(hora_) +":"+ String(min_) +":"+ String(seg_);
+          if(!sd_appendFile(SD, printTemp2, time_rtc+","+printSensor+",\n"))
+            grabar_temp_manual = false;
+
+        }else{
+          if (!SD.exists(printTemp2))
+            if(!sd_appendFile(SD, printTemp2, "Temperatura,\n"))
+                grabar_temp_manual = false;
+
+          if(!sd_appendFile(SD, printTemp2,  printSensor + ",\n"))
+            grabar_temp_manual = false;
+        }
+      }      
+  }else if(grabar_temp_modo){ //true-modo Automatic, false - manual
+    uint8_t hora_, min_, seg_;
+    if (getTimeRTC(hora_,min_,seg_)){
+      
+      if(hora_>= grabar_temp_hora_enc[0] && hora_<= grabar_temp_hora_apag[0] &&
+      min_>= grabar_temp_hora_enc[1] && min_<= grabar_temp_hora_apag[1]){
+        String printTemp2 ("/Temp_");
+        printTemp2.concat(grabar_temp_num_file);
+        printTemp2.concat(".txt");
+        String printSensor(temp_sen);
+        grabar_temp_flag = true;
 
         if (!SD.exists(printTemp2))
             if(!sd_appendFile(SD, printTemp2,String("Tiempo, Temperatura,\n")))
-              grabar_temp_manual = false;
+              grabar_temp_manual = false;          
       }
     }
+  }else
+    grabar_temp_flag = false;
 
-    
+// screen Ctrl Luz
+  if(C_screen == P_CtrlLuz || C_screen == P_Grabar){
+    unsigned long currentMillis_hora_actual = millis();
+    if (currentMillis_hora_actual - previousMillis_hora_actual >= interval_hora_actual) {
+      uint8_t hora_, min_, seg_;
+      if (getTimeRTC(hora_,min_,seg_)){
+        hora_actual[0]=hora_;
+        hora_actual[1]=min_;
+        hora_actual[2]=seg_;
+      }      
+    }
+    if(hora_actual[0] != hora_previus[0] || hora_actual[1] != hora_previus[1] || hora_actual[2] != hora_previus[2]){
+        menuInvernadero.update();
+        hora_previus[0] = hora_actual[0];
+        hora_previus[1] = hora_actual[1];
+        hora_previus[2] = hora_actual[2];
+      }
+  }
 
-  
-  
 }
