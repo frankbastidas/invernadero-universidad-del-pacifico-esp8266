@@ -47,17 +47,17 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);
 // tiempo muestreo
 unsigned long previousMillis = 0;  // will store last time LED was updated
 // constants won't change:
-const long interval = 1000;  // interval at which to blink (milliseconds)
+long interval = 1000;  // interval at which to blink (milliseconds)
 
 // tiempo buzzer
 unsigned long previousMillis_buzz = 0;  // will store last time LED was updated
 // constants won't change:
-const long interval_buzz = 1000;  // interval at which to blink (milliseconds)
+long interval_buzz = 1000;  // interval at which to blink (milliseconds)
 
 // tiempo hora actual
 unsigned long previousMillis_hora_actual = 0;  // will store last time LED was updated
 // constants won't change:
-const long interval_hora_actual = 1000; 
+long interval_hora_actual = 1000; 
 
 int sd_isconnected = false;
 int rtc_isconnected = false;
@@ -128,6 +128,7 @@ int grabar_luz_num_file_display = 0;
 bool grabar_luz_flag = false;
 
 char grabar_notif[15];
+char ctrl_notif[15];
 
 const char string_on[] = "ON";
 const char string_off[] = "OFF";
@@ -217,7 +218,7 @@ LiquidLine Mon_L1_3(12, 0, "H:", hum_sen, "%");
 LiquidLine Mon_L2_1(0, 1, "T2:", temp_sen, "/");
 LiquidLine Mon_L2_2(6, 1, temp_ctrl, "\337");
 LiquidLine Mon_L2_3(12, 1, "H:", hum_sen, "%");
-LiquidLine Mon_L3_1(0, 2, "Ctrl:  ", temp_estado_ctrl_text);
+LiquidLine Mon_L3_1(0, 2, "Ctrl:  ", ctrl_notif);
 LiquidLine Mon_L4_1(0, 3, "Grabando:  ", grabar_notif);
 
 //menuCtrlTemperatura
@@ -412,11 +413,34 @@ void fn_monitorizar()
   // State_encoder = enc_scrolling;
   // fcline_menuAnterior = menuInvernadero.get_focusedLine();
   Sht31_update();
-  if (temp_estado_ctrl)
-    strncpy(temp_estado_ctrl_text, string_on, sizeof(string_on));
-  else
-    strncpy(temp_estado_ctrl_text, string_off, sizeof(string_off));
+
+  String grab_not, ctrl_not;
+  // grabar
+  if(grabar_temp_modo || grabar_temp_manual){
+    grab_not.concat("Temp ");
+  }
+  if(grabar_hum_modo || grabar_hum_manual){
+    grab_not.concat("Hum ");
+  }
+
+  grab_not.toCharArray(grabar_notif, 15);
+
+  // control
+  if(temp_estado_ctrl){
+    ctrl_not.concat("Temp ");
+  }
+  if(luz_manual){
+    ctrl_not.concat("Luz ");
+  }
+
+  ctrl_not.toCharArray(ctrl_notif, 15);
+  
+  // if (temp_estado_ctrl)
+  //   strncpy(temp_estado_ctrl_text, string_on, sizeof(string_on));
+  // else
+  //   strncpy(temp_estado_ctrl_text, string_off, sizeof(string_off));
   menuInvernadero.change_screen2(P_MenuMonitorizar);
+  menuInvernadero.update();
 }
 
 void fn_ctrlTemp()
@@ -513,7 +537,7 @@ bool sd_reconected(){
       sd_isconnected = false;
       lcd.print("    No conectado");
       file.close();
-      grabar_temp_manual = false;
+      // grabar_temp_manual = false;
       // SD.remove("test_conect.txt");
       delay(800);
       fn_principal();
@@ -833,18 +857,22 @@ int getVal_time(int _time){
 bool getTimeRTC(uint8_t &_hora, uint8_t &_min, uint8_t &_seg){
 
   if(!rtc.isrunning()){
-    if(Serial.available())
+    // if(Serial.available())
       Serial.println("RTC No conectado");
     return false;
   }
-  if(Serial.available())
+  // if(Serial.available())
     Serial.println("RTC conectado");
   
   DateTime now = rtc.now();
   _hora = now.hour();
   _min = now.minute();
   _seg = now.second();
-
+  Serial.print(_hora);
+  Serial.print(":");
+  Serial.print(_min);
+  Serial.print(":");
+  Serial.println(_seg);
   return true;
 }
 
@@ -866,6 +894,7 @@ bool sd_appendFile(fs::FS &fs, String path, String message){
     lcd.print(" Escribiendo");
     delay(2000);
     sd_isconnected = false;
+    file.close();
     fn_principal();
     // SD.end();
     return false;
@@ -901,6 +930,7 @@ bool sd_writeFile(fs::FS &fs, String path, String message){
     lcd.print(" Escribiendo");
     delay(2000);
     sd_isconnected = false;
+    file.close();
     fn_principal();
     // SD.end();
     return false;
@@ -1000,17 +1030,19 @@ void selectOption(){
         if(String(temp_estado_ctrl_text).equals(string_on)){
           temp_estado_ctrl=true;
           change_pan = false;
-        }else
+          Serial.println("temp ctrl: true");
+        }else{
+          Serial.println("temp ctrl: true");
           temp_estado_ctrl=false;
+        }
         
         break;
       case P_CtrlLuz_manual:
-        // luz_manual = state_sw;
         if(String(luz_manual_text).equals(string_on)){
-        luz_manual=true;
-        change_pan = false;
+          luz_manual=true;
+          change_pan = false;
         }else
-        luz_manual=false;
+          luz_manual=false;
         break; 
       case P_Grabar_temp_modo:
         {if(String(grabar_temp_modo_text).equals(string_auto))
@@ -1022,11 +1054,11 @@ void selectOption(){
       case P_Grabar_temp_manual:
         // grabar_temp_manual = state_sw;
         if(String(grabar_temp_manual_text).equals(string_on)){
-          grabar_temp_manual=true;
-          if (grabar_temp_modo==false)
-            change_pan = true;
+          grabar_temp_manual = true;
+          // if (grabar_temp_modo==false)
+          change_pan = true;
         }else
-        grabar_temp_manual=false;
+          grabar_temp_manual=false;
         break; 
       case P_Grabar_hum_modo:
         // grabar_hum_modo = state_sw;
@@ -1363,9 +1395,9 @@ void setup() {
   lcd.setCursor(0, 2);
   if (!rtc.begin()) 
     lcd.print(" Error. No iniciado");
-  else{
-    rtc_isconnected=true;
-    if (                                              rtc.isrunning()) {
+  else{    
+    if (rtc.isrunning()) {
+      rtc_isconnected=true;
       // lcd.print("Configurando hora..");
       // When time needs to be set on a new device, or after a power loss, the
       // following line sets the RTC to the date & time this sketch was compiled
@@ -1374,8 +1406,14 @@ void setup() {
       // January 21, 2014 at 3am you would call:
       // rtc.adjust(DateTime(2023, 11, 12, 12, 09, 0));
       delay(200);
+      lcd.print("Conectado");
+      Serial.println("RTC Conectado");
+    }else{
+      lcd.print(" Error. No iniciado");
+      Serial.println("RTC NO Conectado");
+      rtc_isconnected=false;
     }
-    lcd.print("     Conectado");
+      
   }
   delay(tim_inf);
   lcd.clear();
@@ -1695,12 +1733,9 @@ void loop() {
   // Serial.println(C_screen);
 
 // screen Monitorizar
-  if(C_screen == P_MenuMonitorizar){ 
-    if(Sht31_update()) // si cambia valores de temp o hum, actualizar pantalla
+  if(C_screen == P_MenuMonitorizar){
+   if(Sht31_update()) // si cambia valores de temp o hum, actualizar pantalla
         menuInvernadero.update();
-  //  if(grabar_temp_flag){
-  //   grabar_notif=
-  //  }
   }
 
 //Control temperatura
@@ -1737,6 +1772,7 @@ void loop() {
   if(luz_manual){
     uint8_t hora_, min_, seg_;
     if (getTimeRTC(hora_,min_,seg_)){
+      
       if(hora_== luz_hora_enc[0] && min_== luz_hora_enc[1]){
         // bool luz_activate = true;
         if(!luz_toogle_flag){
@@ -1782,8 +1818,8 @@ void loop() {
         printTemp2.concat(".txt");
         String printSensor(temp_sen);
 
-        lcd.setCursor(1,3);
-        lcd.print("grabando..");
+        // lcd.setCursor(1,3);
+        // lcd.print("grabando..");
         uint8_t hora_, min_, seg_;
 
         if (getTimeRTC(hora_,min_,seg_)){
@@ -1797,7 +1833,7 @@ void loop() {
 
         }else{
           if (!SD.exists(printTemp2))
-            if(!sd_appendFile(SD, printTemp2, "Temperatura,\n"))
+            if(!sd_writeFile(SD, printTemp2, "Temperatura,\n"))
                 grabar_temp_manual = false;
 
           if(!sd_appendFile(SD, printTemp2,  printSensor + ",\n"))
@@ -1824,16 +1860,20 @@ void loop() {
   }else
     grabar_temp_flag = false;
 
-// screen Ctrl Luz
+// HORA ACTUAL - screen Ctrl Luz / Grabar
   if(C_screen == P_CtrlLuz || C_screen == P_Grabar){
     unsigned long currentMillis_hora_actual = millis();
     if (currentMillis_hora_actual - previousMillis_hora_actual >= interval_hora_actual) {
+       
+       previousMillis_hora_actual = currentMillis_hora_actual;
+       
       uint8_t hora_, min_, seg_;
       if (getTimeRTC(hora_,min_,seg_)){
         hora_actual[0]=hora_;
         hora_actual[1]=min_;
         hora_actual[2]=seg_;
       }      
+     
     }
     if(hora_actual[0] != hora_previus[0] || hora_actual[1] != hora_previus[1] || hora_actual[2] != hora_previus[2]){
         menuInvernadero.update();
