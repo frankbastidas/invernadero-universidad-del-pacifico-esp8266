@@ -57,10 +57,10 @@ long interval_buzz = 1000;  // interval at which to blink (milliseconds)
 // tiempo hora actual
 unsigned long previousMillis_hora_actual = 0;  // will store last time LED was updated
 // constants won't change:
-long interval_hora_actual = 1000; 
+long interval_hora_actual = 10000; 
 
 int sd_isconnected = false;
-int rtc_isconnected = false;
+// int rtc_isconnected = false;
 int temp_hum_isconnected = false;
 
 // ------ Variables
@@ -71,15 +71,18 @@ int lcd_pos_hora=0;
 
 int time_select = 0;
 
-int hum_sen = 0;
+int hum_sen1 = 0;
+int hum_sen2 = 0;
 unsigned int hum_ctrl = 0;
 
-int temp_sen = 0;
+int temp_sen1 = 0;
+int temp_sen2 = 0;
+int temp_mean = 0;
 unsigned int temp_ctrl_display = 0;
 unsigned int temp_ctrl = 0;
 bool temp_estado_ctrl = false;
 char temp_estado_ctrl_text[3]; // {'O', 'F', 'F', '\0'}
-int umbral_temp_ctrl = 5;
+int umbral_temp_ctrl = 7;
 bool temp_toggle_flag = false;
 
 // char luz_modo_text[4]; // {'M', 'A', 'N', '\0'}
@@ -212,12 +215,12 @@ LiquidLine Prin_L3(1, 2, "Control Luz");
 LiquidLine Prin_L4(1, 3, "Grabar Datos");
 
 //menuMonitorizar
-LiquidLine Mon_L1_1(0, 0, "T:", temp_sen, "/");
+LiquidLine Mon_L1_1(0, 0, "T:", temp_sen1, "/");
 LiquidLine Mon_L1_2(5, 0, temp_ctrl, "\337");
-LiquidLine Mon_L1_3(12, 0, "H:", hum_sen, "%");
-LiquidLine Mon_L2_1(0, 1, "T2:", temp_sen, "/");
+LiquidLine Mon_L1_3(12, 0, "H:", hum_sen1, "%");
+LiquidLine Mon_L2_1(0, 1, "T2:", temp_sen2, "/");
 LiquidLine Mon_L2_2(6, 1, temp_ctrl, "\337");
-LiquidLine Mon_L2_3(12, 1, "H:", hum_sen, "%");
+LiquidLine Mon_L2_3(12, 1, "H:", hum_sen2, "%");
 LiquidLine Mon_L3_1(0, 2, "Ctrl:  ", ctrl_notif);
 LiquidLine Mon_L4_1(0, 3, "Grabando:  ", grabar_notif);
 
@@ -351,7 +354,10 @@ uint8_t fcline_menuAnterior = 1;
 // ------ Configuración sensor temp/humedad
 // SHT2x sht;
 // ArtronShop_SHT3x sht3x(0x44, &Wire); // ADDR: 0 => 0x44, ADDR: 1 => 0x45
-Adafruit_SHT31 sht31 = Adafruit_SHT31();
+Adafruit_SHT31 sht31_1 = Adafruit_SHT31();
+Adafruit_SHT31 sht31_2 = Adafruit_SHT31();
+bool Sensor1isRunning = false;
+bool Sensor2isRunning = false;
 
 // ------ Configuración Encoder
 // Setup a RotaryEncoder with 4 steps per latch for the 2 signal input pins:
@@ -369,6 +375,7 @@ long oldPosition = -999;
 // ------ Configuración Reloj
 // RTC_DS1307 rtc;
 RTC_DS3231 rtc;
+bool rtcIsRunning = false;
 // DS1307 RTC;
 
 // ------ Configuración SD
@@ -388,16 +395,52 @@ void pantalla_anterior()
     delay(50);
 }
 
-bool Sht31_update(){
+bool Sensor1_update(){
+  if(!Sensor1isRunning){
+    temp_sen1 = 0;
+    hum_sen1 = 0;
+    return false;
+  }
+
   float temp_sen_curr, hum_sen_curr;
-  sht31.readBoth(&temp_sen_curr, &hum_sen_curr);
+  sht31_1.readBoth(&temp_sen_curr, &hum_sen_curr);
   
-  if((temp_sen != (int)temp_sen_curr) || (hum_sen != (int)hum_sen_curr)){
-    temp_sen = (int)temp_sen_curr;
-    hum_sen = (int)hum_sen_curr;
+  if((temp_sen1 != (int)temp_sen_curr) || (hum_sen1 != (int)hum_sen_curr)){
+    temp_sen1 = (int)temp_sen_curr;
+    hum_sen1 = (int)hum_sen_curr;
     return true;
   }else
     return false;
+}
+
+bool Sensor2_update(){
+  if(!Sensor2isRunning){
+    temp_sen2 = 0;
+    hum_sen2 = 0;
+    return false;
+  }
+
+  float temp_sen_curr, hum_sen_curr;
+  sht31_2.readBoth(&temp_sen_curr, &hum_sen_curr);
+  
+  if((temp_sen2 != (int)temp_sen_curr) || (hum_sen2 != (int)hum_sen_curr)){
+    temp_sen2 = (int)temp_sen_curr;
+    hum_sen2 = (int)hum_sen_curr;
+    return true;
+  }else
+    return false;
+}
+
+void SensorsMean(){
+  if(!Sensor1isRunning && !Sensor2isRunning){
+    temp_mean = 0;
+  }else if(Sensor1isRunning && !Sensor2isRunning){
+    temp_mean = temp_sen1;
+  }else if(!Sensor1isRunning && Sensor2isRunning){
+    temp_mean = temp_sen2;
+  }else if(Sensor1isRunning && Sensor2isRunning){
+    temp_mean = (temp_sen1 + temp_sen2) / 2;
+  }
 }
 
 void fn_principal()
@@ -413,7 +456,8 @@ void fn_monitorizar()
   lcd.clear();
   // State_encoder = enc_scrolling;
   // fcline_menuAnterior = menuInvernadero.get_focusedLine();
-  Sht31_update();
+  Sensor1_update();
+  Sensor2_update();
 
   String grab_not, ctrl_not;
   // grabar
@@ -857,11 +901,11 @@ int getVal_time(int _time){
 
 bool getTimeRTC(uint8_t &_hora, uint8_t &_min, uint8_t &_seg){
 
-  // if(!rtc.isrunning()){
-  //   // if(Serial.available())
-  //     Serial.println("RTC No conectado");
-  //   return false;
-  // }
+  if(!rtcIsRunning){
+    // if(Serial.available())
+      Serial.println("RTC No conectado");
+    return false;
+  }
   
   // if(Serial.available())
     Serial.println("RTC conectado");
@@ -1034,11 +1078,23 @@ void selectOption(){
       case P_CtrlTemperatura_ctrlStatus:
         // temp_estado_ctrl = state_sw;
         if(String(temp_estado_ctrl_text).equals(string_on)){
-          temp_estado_ctrl=true;
-          change_pan = false;
-          Serial.println("temp ctrl: true");
+          if(!Sensor1isRunning && !Sensor2isRunning){
+            lcd.clear();
+            lcd.setCursor(0, 1);
+            lcd.print("   Sensores ");
+            lcd.setCursor(0, 2);
+            lcd.print("   No encontrados");
+            temp_estado_ctrl = false;
+            strncpy(temp_estado_ctrl_text, string_off, sizeof(string_off));
+            Serial.println("temp ctrl: false");       
+            delay(700);
+          }else{
+            temp_estado_ctrl = true;
+            change_pan = false;
+            Serial.println("temp ctrl: true");
+          }
         }else{
-          Serial.println("temp ctrl: true");
+          Serial.println("temp ctrl: FALSE");
           temp_estado_ctrl=false;
         }
         
@@ -1399,11 +1455,12 @@ void setup() {
   lcd.setCursor(0, 1);
   lcd.print("       Reloj: ");
   lcd.setCursor(0, 2);
-  if (!rtc.begin()) 
+  if (!rtc.begin()){
     lcd.print(" Error. No iniciado");
+    rtcIsRunning = false;
+  }
   else{    
     // if (rtc.isrunning()) {
-    //   rtc_isconnected=true;
     //   // lcd.print("Configurando hora..");
     //   // When time needs to be set on a new device, or after a power loss, the
     //   // following line sets the RTC to the date & time this sketch was compiled
@@ -1417,24 +1474,49 @@ void setup() {
     // }else{
     //   lcd.print(" Error. No iniciado");
     //   Serial.println("RTC NO Conectado");
-    //   rtc_isconnected=false;
     // }
       // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   
       lcd.print("     Conectado");
+      rtcIsRunning = true;
       
   }
   delay(tim_inf);
   lcd.clear();
 
-   // ------ Iniciar sht
+   // ------ Iniciar sht 1
   lcd.setCursor(0, 1);
-  lcd.print("       Sht31: ");
+  lcd.print("      Sensor1: ");
   lcd.setCursor(0, 2);
-  if (!sht31.begin(0x44)) 
+  if (!sht31_1.begin(0x44)){
+    Sensor1isRunning = false;
     lcd.print("   No conectado");
-  else
+    Serial.println("SHT1 No Conectado");
+  }
+  else{
+    Sensor1isRunning = true;
     lcd.print("     Conectado");
+    Serial.println("SHT1 Conectado");
+  }
+
+  delay(tim_inf);
+  lcd.clear();
+
+    // ------ Iniciar sht 2
+  lcd.setCursor(0, 1);
+  lcd.print("      Sensor2: ");
+  lcd.setCursor(0, 2);
+  if (!sht31_2.begin(0x45)){
+    Sensor2isRunning = false;
+    lcd.print("   No conectado");
+    Serial.println("SHT2 No Conectado");
+  }
+  else{
+    Sensor2isRunning = true;
+    lcd.print("     Conectado");
+    Serial.println("SHT2 Conectado");
+  }
+      
   delay(tim_inf);
   lcd.clear();
 
@@ -1743,14 +1825,17 @@ void loop() {
 
 // screen Monitorizar
   if(C_screen == P_MenuMonitorizar){
-   if(Sht31_update()) // si cambia valores de temp o hum, actualizar pantalla
+    if(Sensor1_update() || Sensor2_update()) // si cambia valores de temp o hum, actualizar pantalla
         menuInvernadero.update();
+
   }
 
 //Control temperatura
   if(temp_estado_ctrl && (temp_ctrl > 10)){
-    Sht31_update();
-    if (temp_sen > (temp_ctrl + umbral_temp_ctrl)){
+    Sensor1_update();
+    Sensor2_update();
+    SensorsMean();
+    if (temp_mean > (temp_ctrl + umbral_temp_ctrl)){
       if(!temp_toggle_flag){
         digitalWrite(VentiOffPin, HIGH); // NO ACTIVAR EL RELE DE APAGAR
         digitalWrite(VentiOnPin, LOW); // ACTIVAR EL RELE DE ENCENDER
@@ -1758,7 +1843,7 @@ void loop() {
         digitalWrite(VentiOnPin, HIGH); // DESACTIVAR EL RELE DE ENCENDER
       }
       temp_toggle_flag = true;
-    }else if(temp_sen < (temp_ctrl -umbral_temp_ctrl)){
+    }else if(temp_mean < (temp_ctrl - umbral_temp_ctrl)){
       if(temp_toggle_flag){
         digitalWrite(VentiOnPin, HIGH); // NO ACTIVAR EL RELE DE ENCENDER
         digitalWrite(VentiOffPin, LOW); // ACTIVAR EL RELE DE APAGAR
@@ -1825,27 +1910,42 @@ void loop() {
         String printTemp2 ("/Temp_");
         printTemp2.concat(grabar_temp_num_file);
         printTemp2.concat(".txt");
-        String printSensor(temp_sen);
-
+        Sensor1_update();
+        String printSensor1(temp_sen1);
+        Sensor2_update();
+        String printSensor2(temp_sen2);
         // lcd.setCursor(1,3);
         // lcd.print("grabando..");
         uint8_t hora_, min_, seg_;
+        String title_temp_sensores;
+        String temp_sensores;
+        
+        if(Sensor1isRunning && !Sensor2isRunning){
+          title_temp_sensores = "Temperatura1";
+          temp_sensores = printSensor1;
+        }else if(!Sensor1isRunning && Sensor2isRunning){
+          title_temp_sensores = "Temperatura2";
+          temp_sensores = printSensor2;
+        }else if(Sensor1isRunning && Sensor2isRunning){
+          title_temp_sensores = "Temperatura1, Temperatura2";
+          temp_sensores = printSensor1 + "," + printSensor2;
+        }
 
         if (getTimeRTC(hora_,min_,seg_)){
           if (!SD.exists(printTemp2))
-            if(!sd_appendFile(SD, printTemp2, "Tiempo, Temperatura,\n"))
+            if(!sd_writeFile(SD, printTemp2, "Tiempo," + title_temp_sensores + "\n"))
               grabar_temp_manual = false;
 
           String time_rtc = String(hora_) +":"+ String(min_) +":"+ String(seg_);
-          if(!sd_appendFile(SD, printTemp2, time_rtc+","+printSensor+",\n"))
+          if(!sd_appendFile(SD, printTemp2, time_rtc + "," + temp_sensores + "\n"))
             grabar_temp_manual = false;
 
         }else{
           if (!SD.exists(printTemp2))
-            if(!sd_writeFile(SD, printTemp2, "Temperatura,\n"))
+            if(!sd_writeFile(SD, printTemp2, title_temp_sensores + "\n"))
                 grabar_temp_manual = false;
 
-          if(!sd_appendFile(SD, printTemp2,  printSensor + ",\n"))
+          if(!sd_appendFile(SD, printTemp2,  temp_sensores + "\n"))
             grabar_temp_manual = false;
         }
       }      
@@ -1855,15 +1955,44 @@ void loop() {
       
       if(hora_>= grabar_temp_hora_enc[0] && hora_<= grabar_temp_hora_apag[0] &&
       min_>= grabar_temp_hora_enc[1] && min_<= grabar_temp_hora_apag[1]){
-        String printTemp2 ("/Temp_");
-        printTemp2.concat(grabar_temp_num_file);
-        printTemp2.concat(".txt");
-        String printSensor(temp_sen);
         grabar_temp_flag = true;
+        unsigned long currentMillis = millis();
+        if (currentMillis - previousMillis >= interval) {
+          // save the last time
+          previousMillis = currentMillis;
+          
+          String printTemp2 ("/Temp_");
+          printTemp2.concat(grabar_temp_num_file);
+          printTemp2.concat(".txt");
 
-        if (!SD.exists(printTemp2))
-            if(!sd_appendFile(SD, printTemp2,String("Tiempo, Temperatura,\n")))
-              grabar_temp_manual = false;          
+          Sensor1_update();
+          String printSensor1(temp_sen1);
+          Sensor2_update();
+          String printSensor2(temp_sen2);
+          
+
+          String title_temp_sensores;
+          String temp_sensores;
+          
+          if(Sensor1isRunning && !Sensor2isRunning){
+            title_temp_sensores = "Temperatura1";
+            temp_sensores = printSensor1;
+          }else if(!Sensor1isRunning && Sensor2isRunning){
+            title_temp_sensores = "Temperatura2";
+            temp_sensores = printSensor2;
+          }else if(Sensor1isRunning && Sensor2isRunning){
+            title_temp_sensores = "Temperatura1, Temperatura2";
+            temp_sensores = printSensor1 + "," + printSensor2;
+          }
+
+          if (!SD.exists(printTemp2))
+            if(!sd_writeFile(SD, printTemp2, "Tiempo," + title_temp_sensores + "\n"))
+              grabar_temp_manual = false;
+
+          String time_rtc = String(hora_) +":"+ String(min_) +":"+ String(seg_);
+          if(!sd_appendFile(SD, printTemp2, time_rtc + "," + temp_sensores + "\n"))
+            grabar_temp_manual = false;
+        }
       }
     }
   }else
