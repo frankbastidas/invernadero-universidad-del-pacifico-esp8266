@@ -1998,6 +1998,107 @@ void loop() {
   }else
     grabar_temp_flag = false;
 
+//Grabar datos - humedad - Manual - On
+  if(!grabar_hum_modo && grabar_hum_manual){ //true-modo Automatic, false - manual
+    // if(Serial.available() > 0)
+    //   Serial.println("Aqui es"); Temp
+    grabar_hum_flag = true;
+    unsigned long currentMillis = millis();
+      if (currentMillis - previousMillis >= interval) {
+        // save the last time
+        previousMillis = currentMillis;
+
+        String printHum2 ("/Hum_");
+        printHum2.concat(grabar_hum_num_file);
+        printHum2.concat(".txt");
+        Sensor1_update();
+        String printSensor1(hum_sen1);
+        Sensor2_update();
+        String printSensor2(hum_sen2);
+        // lcd.setCursor(1,3);
+        // lcd.print("grabando..");
+        uint8_t hora_, min_, seg_;
+        String title_hum_sensores;
+        String hum_sensores;
+        
+        if(Sensor1isRunning && !Sensor2isRunning){
+          title_hum_sensores = "Humedad1";
+          hum_sensores = printSensor1;
+        }else if(!Sensor1isRunning && Sensor2isRunning){
+          title_hum_sensores = "Humedad2";
+          hum_sensores = printSensor2;
+        }else if(Sensor1isRunning && Sensor2isRunning){
+          title_hum_sensores = "Humedad1, Humedad2";
+          hum_sensores = printSensor1 + "," + printSensor2;
+        }
+
+        if (getTimeRTC(hora_,min_,seg_)){
+          if (!SD.exists(printHum2))
+            if(!sd_writeFile(SD, printHum2, "Tiempo," + title_hum_sensores + "\n"))
+              grabar_hum_manual = false;
+
+          String time_rtc = String(hora_) +":"+ String(min_) +":"+ String(seg_);
+          if(!sd_appendFile(SD, printHum2, time_rtc + "," + hum_sensores + "\n"))
+            grabar_hum_manual = false;
+
+        }else{
+          if (!SD.exists(printHum2))
+            if(!sd_writeFile(SD, printHum2, title_hum_sensores + "\n"))
+                grabar_hum_manual = false;
+
+          if(!sd_appendFile(SD, printHum2,  hum_sensores + "\n"))
+            grabar_hum_manual = false;
+        }
+      }      
+  }else if(grabar_hum_modo){ //true-modo Automatic, false - manual
+    uint8_t hora_, min_, seg_;
+    if (getTimeRTC(hora_,min_,seg_)){
+      
+      if(hora_>= grabar_hum_hora_enc[0] && hora_<= grabar_hum_hora_apag[0] &&
+      min_>= grabar_hum_hora_enc[1] && min_<= grabar_hum_hora_apag[1]){
+        grabar_hum_flag = true;
+        unsigned long currentMillis = millis();
+        if (currentMillis - previousMillis >= interval) {
+          // save the last time
+          previousMillis = currentMillis;
+          
+          String printHum2 ("/Hum_");
+          printHum2.concat(grabar_hum_num_file);
+          printHum2.concat(".txt");
+
+          Sensor1_update();
+          String printSensor1(hum_sen1);
+          Sensor2_update();
+          String printSensor2(hum_sen2);
+          
+
+          String title_hum_sensores;
+          String hum_sensores;
+          
+          if(Sensor1isRunning && !Sensor2isRunning){
+            title_hum_sensores = "Humedad1";
+            hum_sensores = printSensor1;
+          }else if(!Sensor1isRunning && Sensor2isRunning){
+            title_hum_sensores = "Humedad2";
+            hum_sensores = printSensor2;
+          }else if(Sensor1isRunning && Sensor2isRunning){
+            title_hum_sensores = "Humedad1, Humedad2";
+            hum_sensores = printSensor1 + "," + printSensor2;
+          }
+
+          if (!SD.exists(printHum2))
+            if(!sd_writeFile(SD, printHum2, "Tiempo," + title_hum_sensores + "\n"))
+              grabar_hum_manual = false;
+
+          String time_rtc = String(hora_) +":"+ String(min_) +":"+ String(seg_);
+          if(!sd_appendFile(SD, printHum2, time_rtc + "," + hum_sensores + "\n"))
+            grabar_hum_manual = false;
+        }
+      }
+    }
+  }else
+    grabar_hum_flag = false;
+
 // HORA ACTUAL - screen Ctrl Luz / Grabar
   if(C_screen == P_CtrlLuz || C_screen == P_Grabar){
     unsigned long currentMillis_hora_actual = millis();
