@@ -19,14 +19,14 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);
 #if defined(ESP32)
 #include <FS.h>
 // Example for ESP8266 NodeMCU with input signals on pin D5 and D6
-#define PIN_IN1 GPIO_NUM_0
-#define PIN_IN2 GPIO_NUM_4
+#define PIN_IN1 GPIO_NUM_16
+#define PIN_IN2 GPIO_NUM_17
 
 //encoder pin 2
-#define encoderBotonPin GPIO_NUM_2
+#define encoderBotonPin GPIO_NUM_25
 
 // buzzer pin 515
-#define BuzzPin GPIO_NUM_15
+#define BuzzPin GPIO_NUM_4
 
 // Ventiladores ON pin 27
 #define VentiOnPin GPIO_NUM_27
@@ -232,7 +232,7 @@ LiquidLine CtrlTemp_status_L2(1, 1, temp_estado_ctrl_text);
 
 //pantallaCtrlTemperatura_ctrlTemp
 LiquidLine CtrlTemp_temp_L1(1, 0, "Temperatura:");
-LiquidLine CtrlTemp_temp_L2(1, 1, temp_ctrl);
+LiquidLine CtrlTemp_temp_L2(1, 1, temp_ctrl_display);
 
 //menuCtrlLuz
 LiquidLine CtrlLuz_L1(1, 0, "Menu Principal");
@@ -247,11 +247,11 @@ LiquidLine CtrlLuz_manual_L2(1, 1, luz_manual_text);
 
 //pantallaCtrlLuz_horaenc
 LiquidLine CtrlLuz_horaenc_L1(1, 0, "hora encender:");
-LiquidLine CtrlLuz_horaenc_L2(1, 1, luz_hora_enc[0] ,":", luz_hora_enc[1]);
+LiquidLine CtrlLuz_horaenc_L2(1, 1, luz_hora_enc_display[0] ,":", luz_hora_enc_display[1]);
 
 //pantallaCtrlLuz_horaapg
 LiquidLine CtrlLuz_horaapg_L1(1, 0, "hora apagar:");
-LiquidLine CtrlLuz_horaapg_L2(1, 1, luz_hora_apag[0] ,":", luz_hora_apag[1]);
+LiquidLine CtrlLuz_horaapg_L2(1, 1, luz_hora_apag_display[0] ,":", luz_hora_apag_display[1]);
 
 //menuGrabar
 LiquidLine Grabar_L1(1, 0, "Menu Principal");
@@ -281,11 +281,11 @@ LiquidLine Grabar_temp_manual_L2(1, 1, grabar_temp_manual_text);
 
 //pantallaGrabar_temp_horaenc
 LiquidLine Grabar_temp_horaenc_L1(1, 0, "hora encender:");
-LiquidLine Grabar_temp_horaenc_L2(1, 1, grabar_temp_hora_enc[0], ":", grabar_temp_hora_enc[1]);
+LiquidLine Grabar_temp_horaenc_L2(1, 1, grabar_temp_hora_enc_display[0], ":", grabar_temp_hora_enc_display[1]);
 
 //pantallaGrabar_temp_horaapg
 LiquidLine Grabar_temp_horaapg_L1(1, 0, "hora apagar:");
-LiquidLine Grabar_temp_horaapg_L2(1, 1, grabar_temp_hora_apag[0], ":", grabar_temp_hora_apag[1]);
+LiquidLine Grabar_temp_horaapg_L2(1, 1, grabar_temp_hora_apag_display[0], ":", grabar_temp_hora_apag_display[1]);
 
 //menuGrabar_hum
 LiquidLine Grabar_hum_L1(1, 0, "Menu Grabar");
@@ -309,11 +309,11 @@ LiquidLine Grabar_hum_manual_L2(1, 1, grabar_hum_manual_text);
 
 //pantallaGrabar_hum_horaenc
 LiquidLine Grabar_hum_horaenc_L1(1, 0, "hora encender:");
-LiquidLine Grabar_hum_horaenc_L2(1, 1, grabar_hum_hora_enc[0], ":", grabar_hum_hora_enc[1]);
+LiquidLine Grabar_hum_horaenc_L2(1, 1, grabar_hum_hora_enc_display[0], ":", grabar_hum_hora_enc_display[1]);
 
 //pantallaGrabar_hum_horaapg
 LiquidLine Grabar_hum_horaapg_L1(1, 0, "hora apagar:");
-LiquidLine Grabar_hum_horaapg_L2(1, 1, grabar_hum_hora_apag[0], ":", grabar_hum_hora_apag[1]);
+LiquidLine Grabar_hum_horaapg_L2(1, 1, grabar_hum_hora_apag_display[0], ":", grabar_hum_hora_apag_display[1]);
 
 //menuGrabar_hum
 LiquidLine Grabar_luz_L1(1, 0, "Menu Grabar");
@@ -367,7 +367,8 @@ long oldPosition = -999;
 
 
 // ------ Configuración Reloj
-RTC_DS1307 rtc;
+// RTC_DS1307 rtc;
+RTC_DS3231 rtc;
 // DS1307 RTC;
 
 // ------ Configuración SD
@@ -856,11 +857,12 @@ int getVal_time(int _time){
 
 bool getTimeRTC(uint8_t &_hora, uint8_t &_min, uint8_t &_seg){
 
-  if(!rtc.isrunning()){
-    // if(Serial.available())
-      Serial.println("RTC No conectado");
-    return false;
-  }
+  // if(!rtc.isrunning()){
+  //   // if(Serial.available())
+  //     Serial.println("RTC No conectado");
+  //   return false;
+  // }
+  
   // if(Serial.available())
     Serial.println("RTC conectado");
   
@@ -947,8 +949,12 @@ bool sd_writeFile(fs::FS &fs, String path, String message){
 }
 
 void selectOption(){
+
   if(digitalRead(encoderBotonPin)==LOW){
     delay(20);
+    if(digitalRead(encoderBotonPin)==HIGH){
+      return;
+    }
     while (digitalRead(encoderBotonPin)==LOW);
     delay(10);
     digitalWrite(BuzzPin, HIGH);
@@ -1305,7 +1311,7 @@ void encoderRotating(){
     case LiquidScreen::enc_scrolling:
       {
         if (menuInvernadero.is_callable(1)){
-          Serial.println("ROTANDO..");
+          // Serial.println("ROTANDO..");
           if (En_direction == RotaryEncoder::Direction::CLOCKWISE)
             menuInvernadero.switch_focus(true);
           else if (En_direction == RotaryEncoder::Direction::COUNTERCLOCKWISE)
@@ -1358,7 +1364,7 @@ void setup() {
   int tim_inf=1000;
 
   // ------ Iniciar Entradas/Salidas
-  pinMode(encoderBotonPin, INPUT);
+  pinMode(encoderBotonPin, INPUT_PULLUP);
   pinMode(BuzzPin, OUTPUT);
   pinMode(VentiOnPin, OUTPUT);
   pinMode(VentiOffPin, OUTPUT);
@@ -1396,23 +1402,26 @@ void setup() {
   if (!rtc.begin()) 
     lcd.print(" Error. No iniciado");
   else{    
-    if (rtc.isrunning()) {
-      rtc_isconnected=true;
-      // lcd.print("Configurando hora..");
-      // When time needs to be set on a new device, or after a power loss, the
-      // following line sets the RTC to the date & time this sketch was compiled
-      rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-      // This line sets the RTC with an explicit date & time, for example to set
-      // January 21, 2014 at 3am you would call:
-      // rtc.adjust(DateTime(2023, 11, 12, 12, 09, 0));
-      delay(200);
-      lcd.print("Conectado");
-      Serial.println("RTC Conectado");
-    }else{
-      lcd.print(" Error. No iniciado");
-      Serial.println("RTC NO Conectado");
-      rtc_isconnected=false;
-    }
+    // if (rtc.isrunning()) {
+    //   rtc_isconnected=true;
+    //   // lcd.print("Configurando hora..");
+    //   // When time needs to be set on a new device, or after a power loss, the
+    //   // following line sets the RTC to the date & time this sketch was compiled
+    //   rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    //   // This line sets the RTC with an explicit date & time, for example to set
+    //   // January 21, 2014 at 3am you would call:
+    //   // rtc.adjust(DateTime(2023, 11, 12, 12, 09, 0));
+    //   delay(200);
+    //   lcd.print("Conectado");
+    //   Serial.println("RTC Conectado");
+    // }else{
+    //   lcd.print(" Error. No iniciado");
+    //   Serial.println("RTC NO Conectado");
+    //   rtc_isconnected=false;
+    // }
+      // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  
+      lcd.print("     Conectado");
       
   }
   delay(tim_inf);
