@@ -22,11 +22,11 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);
 #define PIN_IN1 GPIO_NUM_16
 #define PIN_IN2 GPIO_NUM_17
 
-//encoder pin 2
-#define encoderBotonPin GPIO_NUM_25
+//encoder pin 4
+#define encoderBotonPin GPIO_NUM_4
 
-// buzzer pin 515
-#define BuzzPin GPIO_NUM_4
+// buzzer pin 2
+#define BuzzPin GPIO_NUM_2
 
 // Ventiladores ON pin 27
 #define VentiOnPin GPIO_NUM_27
@@ -35,10 +35,10 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);
 #define VentiOffPin GPIO_NUM_26
 
 // Luces On pin 14
-#define LucesOnPin GPIO_NUM_14
+#define LucesOnPin GPIO_NUM_12
 
 // Luces Off pin 12
-#define LucesOffPin GPIO_NUM_12
+#define LucesOffPin GPIO_NUM_14
 
 #endif
 
@@ -222,7 +222,7 @@ LiquidLine Mon_L2_1(0, 1, "T2:", temp_sen2, "/");
 LiquidLine Mon_L2_2(6, 1, temp_ctrl, "\337");
 LiquidLine Mon_L2_3(12, 1, "H:", hum_sen2, "%");
 LiquidLine Mon_L3_1(0, 2, "Ctrl:  ", ctrl_notif);
-LiquidLine Mon_L4_1(0, 3, "Grabando:  ", grabar_notif);
+LiquidLine Mon_L4_1(0, 3, "Grabar:  ", grabar_notif);
 
 //menuCtrlTemperatura
 LiquidLine CtrlTemp_L1(1, 0, "Menu Principal");
@@ -1475,7 +1475,7 @@ void setup() {
     //   lcd.print(" Error. No iniciado");
     //   Serial.println("RTC NO Conectado");
     // }
-      // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+       //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   
       lcd.print("     Conectado");
       rtcIsRunning = true;
